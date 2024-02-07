@@ -13,7 +13,11 @@ public:
     USimulationSubsystem();
     virtual void Initialize(FSubsystemCollectionBase& Collection) override;
     virtual void Deinitialize() override;
+
 private:
+    UPROPERTY()
+    UTexture2D* TerrainHeightmapTex;
+
     UPROPERTY()
     UTextureRenderTarget2D* WaterHeightmapRT;
 };
