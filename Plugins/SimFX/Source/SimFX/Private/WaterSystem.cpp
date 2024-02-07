@@ -2,6 +2,29 @@
 
 #include "WaterSystem.h"
 
+#include "RenderCore/Public/RenderGraphUtils.h"
+#include "GlobalShader.h"
+
+class SIMFX_API FWaterCalc : public FGlobalShader
+{
+public:
+
+	DECLARE_GLOBAL_SHADER(FWaterCalc);
+	SHADER_USE_PARAMETER_STRUCT(FWaterCalc, FGlobalShader);
+
+	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
+		SHADER_PARAMETER_UAV(RWTexture2D<float4>, WaterHeightTexRW)
+	END_SHADER_PARAMETER_STRUCT()
+
+public:
+	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
+	{
+		FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+	}
+};
+
+IMPLEMENT_GLOBAL_SHADER(FWaterCalc, "/Shaders/WaterCalc.usf", "CalcCS", SF_Compute);
+
 bool FWaterSystem::BuildTextures(FPostOpaqueRenderParameters& Parameters)
 {
 	if (!WaterHeightTex.IsValid())
@@ -35,7 +58,23 @@ void FWaterSystem::Init(FPostOpaqueRenderParameters& Parameters)
 
 void FWaterSystem::Calc(FPostOpaqueRenderParameters& Parameters)
 {
-
+	TShaderMapRef<FWaterCalc> CalcCS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+	if (!CalcCS.IsValid())
+	{
+		return;
+	}
+	FWaterCalc::FParameters CalcPassParams;
+	CalcPassParams.WaterHeightTexRW = WaterHeightTexUAV;
+	FComputeShaderUtils::Dispatch(
+		*Parameters.RHICmdList,
+		CalcCS,
+		CalcPassParams,
+		FIntVector(
+			WaterHeightTex->GetSizeX() / 8,
+			WaterHeightTex->GetSizeY() / 8,
+			1
+		)
+	);
 }
 
 void FWaterSystem::Copy(FPostOpaqueRenderParameters& Parameters)
