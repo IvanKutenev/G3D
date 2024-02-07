@@ -14,5 +14,5 @@ void InitHeightCS(int3 dispatchThreadId : SV_DispatchThreadID)
     {
         return;
     }
-    gWaterHeightTexRW[dispatchThreadId.xy] = 0.05f + 0.01f * sin(dispatchThreadId.x) * sin(dispatchThreadId.y) - gTerrainHeightTexRO[dispatchThreadId.xy];
+    gWaterHeightTexRW[dispatchThreadId.xy] = 0.05f - gTerrainHeightTexRO[dispatchThreadId.xy].x;
 }

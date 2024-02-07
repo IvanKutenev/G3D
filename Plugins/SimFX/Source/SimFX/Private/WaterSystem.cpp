@@ -3,6 +3,7 @@
 #include "WaterSystem.h"
 
 #include "RenderCore/Public/RenderGraphUtils.h"
+#include "Kismet/GameplayStatics.h"
 #include "GlobalShader.h"
 
 class SIMFX_API FWaterInitHeight : public FGlobalShader
@@ -48,7 +49,9 @@ public:
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
 		SHADER_PARAMETER(int, gWaterHeightTexSzX)
 		SHADER_PARAMETER(int, gWaterHeightTexSzY)
+		SHADER_PARAMETER(float, gTime)
 		SHADER_PARAMETER_TEXTURE(Texture2D<float4>, gWaterHeightPrevTexRO)
+		SHADER_PARAMETER_TEXTURE(Texture2D<float4>, gWaterVelocityTexRO)
 		SHADER_PARAMETER_UAV(RWTexture2D<float4>, gWaterHeightTexRW)
 	END_SHADER_PARAMETER_STRUCT()
 public:
@@ -66,6 +69,8 @@ public:
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
 		SHADER_PARAMETER(int, gWaterVelocityTexSzX)
 		SHADER_PARAMETER(int, gWaterVelocityTexSzY)
+		SHADER_PARAMETER_TEXTURE(Texture2D<float4>, gTerrainHeightTexRO)
+		SHADER_PARAMETER_TEXTURE(Texture2D<float4>, gWaterHeightTexRO)
 		SHADER_PARAMETER_TEXTURE(Texture2D<float4>, gWaterVelocityPrevTexRO)
 		SHADER_PARAMETER_UAV(RWTexture2D<float4>, gWaterVelocityTexRW)
 	END_SHADER_PARAMETER_STRUCT()
@@ -227,6 +232,8 @@ void FWaterSystem::Calc(FPostOpaqueRenderParameters& Parameters)
 	FWaterCalcHeight::FParameters CalcHeightPassParams;
 	CalcHeightPassParams.gWaterHeightTexSzX = WaterHeightTex->GetSizeX();
 	CalcHeightPassParams.gWaterHeightTexSzY = WaterHeightTex->GetSizeY();
+	CalcHeightPassParams.gTime = IsValid(GWorld) ? UGameplayStatics::GetUnpausedTimeSeconds(GWorld) : 0.0f;
+	CalcHeightPassParams.gWaterVelocityTexRO = WaterVelocityPrevTex;
 	CalcHeightPassParams.gWaterHeightPrevTexRO = WaterHeightPrevTex;
 	CalcHeightPassParams.gWaterHeightTexRW = WaterHeightTexUAV;
 	FComputeShaderUtils::Dispatch(
@@ -249,6 +256,8 @@ void FWaterSystem::Calc(FPostOpaqueRenderParameters& Parameters)
 	FWaterCalcVelocity::FParameters CalcVelocityPassParams;
 	CalcVelocityPassParams.gWaterVelocityTexSzX = WaterHeightTex->GetSizeX() + 1;
 	CalcVelocityPassParams.gWaterVelocityTexSzY = WaterHeightTex->GetSizeY() + 1;
+	CalcVelocityPassParams.gWaterHeightTexRO = WaterHeightPrevTex;
+	CalcVelocityPassParams.gTerrainHeightTexRO = DispatchParams.TerrainHeightmapTex->GetResource()->GetTexture2DRHI();
 	CalcVelocityPassParams.gWaterVelocityPrevTexRO = WaterVelocityPrevTex;
 	CalcVelocityPassParams.gWaterVelocityTexRW = WaterVelocityTexUAV;
 	FComputeShaderUtils::Dispatch(
@@ -256,8 +265,8 @@ void FWaterSystem::Calc(FPostOpaqueRenderParameters& Parameters)
 		CalcVelocityCS,
 		CalcVelocityPassParams,
 		FIntVector(
-			(WaterHeightTex->GetSizeX() + 1) / 8 + 1,
-			(WaterHeightTex->GetSizeY() + 1) / 8 + 1,
+			WaterHeightTex->GetSizeX() / 8 + 1,
+			WaterHeightTex->GetSizeY() / 8 + 1,
 			1
 		)
 	);
