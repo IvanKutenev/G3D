@@ -75,4 +75,13 @@ private:
 
 	FTexture2DRHIRef WaterHeightTex;
 	FUnorderedAccessViewRHIRef WaterHeightTexUAV;
+
+	FTexture2DRHIRef WaterHeightPrevTex;
+	FUnorderedAccessViewRHIRef WaterHeightPrevTexUAV;
+
+	FTexture2DRHIRef WaterVelocityTex;
+	FUnorderedAccessViewRHIRef WaterVelocityTexUAV;
+
+	FTexture2DRHIRef WaterVelocityPrevTex;
+	FUnorderedAccessViewRHIRef WaterVelocityPrevTexUAV;
 };

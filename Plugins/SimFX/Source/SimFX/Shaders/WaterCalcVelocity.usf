@@ -1,0 +1,18 @@
+#include "/Engine/Public/Platform.ush"
+ 
+int gWaterVelocityTexSzX;
+int gWaterVelocityTexSzY;
+
+Texture2D<float4> gWaterVelocityPrevTexRO;
+RWTexture2D<float4> gWaterVelocityTexRW;
+ 
+[numthreads(8, 8, 1)]
+void CalcVelocityCS(int3 dispatchThreadId : SV_DispatchThreadID)
+{
+	[branch]
+    if (dispatchThreadId.x >= gWaterVelocityTexSzX || dispatchThreadId.y >= gWaterVelocityTexSzY)
+    {
+        return;
+    }
+    gWaterVelocityTexRW[dispatchThreadId.xy] = gWaterVelocityPrevTexRO[dispatchThreadId.xy];
+}

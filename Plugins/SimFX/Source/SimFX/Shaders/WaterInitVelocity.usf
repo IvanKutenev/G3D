@@ -1,0 +1,17 @@
+#include "/Engine/Public/Platform.ush"
+
+int gWaterVelocityTexSzX;
+int gWaterVelocityTexSzY;
+
+RWTexture2D<float4> gWaterVelocityTexRW;
+
+[numthreads(8, 8, 1)]
+void InitVelocityCS(int3 dispatchThreadId : SV_DispatchThreadID)
+{
+    [branch]
+    if (dispatchThreadId.x >= gWaterVelocityTexSzX || dispatchThreadId.y >= gWaterVelocityTexSzY)
+    {
+        return;
+    }
+    gWaterVelocityTexRW[dispatchThreadId.xy] = 0.0f;
+}

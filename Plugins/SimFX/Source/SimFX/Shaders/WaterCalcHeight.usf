@@ -1,0 +1,18 @@
+#include "/Engine/Public/Platform.ush"
+
+int gWaterHeightTexSzX;
+int gWaterHeightTexSzY;
+
+Texture2D<float4> gWaterHeightPrevTexRO;
+RWTexture2D<float4> gWaterHeightTexRW;
+ 
+[numthreads(8, 8, 1)]
+void CalcHeightCS(int3 dispatchThreadId : SV_DispatchThreadID)
+{
+	[branch]
+    if (dispatchThreadId.x >= gWaterHeightTexSzX || dispatchThreadId.y >= gWaterHeightTexSzY)
+    {
+        return;
+    }
+    gWaterHeightTexRW[dispatchThreadId.xy] = gWaterHeightPrevTexRO[dispatchThreadId.xy];
+}
