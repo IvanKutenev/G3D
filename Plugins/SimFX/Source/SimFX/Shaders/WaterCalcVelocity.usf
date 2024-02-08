@@ -28,4 +28,8 @@ void CalcVelocityCS(int3 id : SV_DispatchThreadID)
         dn.y -= gTerrainHeightTexRO[int2(id.x, id.y - 1)] + gWaterHeightTexRO[int2(id.x, id.y - 1)];
         gWaterVelocityTexRW[id.xy] = gWaterVelocityPrevTexRO[id.xy] - gGravity * dn * gDeltaTime / gDeltaX;
     }
+    else
+    {
+        gWaterVelocityTexRW[id.xy] = gWaterVelocityPrevTexRO[id.xy];
+    }
 }
