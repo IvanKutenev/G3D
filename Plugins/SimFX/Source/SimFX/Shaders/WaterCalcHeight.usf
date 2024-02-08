@@ -10,15 +10,15 @@ Texture2D<float> gTerrainHeightTexRO;
 Texture2D<float> gWaterHeightPrevTexRO;
 RWTexture2D<float> gWaterHeightTexRW;
  
-static const float dt = 1.0f / 30.0f;
-static const float dx = 1.0f;
+static const float gDeltaTime = 1.0f / 30.0f;
+static const float gDeltaX = 1.0f;
 static const float gGenEffMagnitude = 0.05f;
 static const float gGenOscMagnitude = 0.005f;
 static const float gGenFreq = 1.0f;
 
 bool isInsideBounds(int3 id)
 {
-    return id.x > 0 && id.y > 0 && id.x < gWaterHeightTexSzX - 1 && id.y < gWaterHeightTexSzX - 1;
+    return id.x > 0 && id.y > 0 && id.x < gWaterHeightTexSzX - 1 && id.y < gWaterHeightTexSzY - 1;
 }
 
 [numthreads(8, 8, 1)]
@@ -50,8 +50,8 @@ void CalcHeightCS(int3 id : SV_DispatchThreadID)
         float dhdt = -(
             h_xp * gWaterVelocityTexRO[int2(id.x + 1, id.y)].x - h_xm * gWaterVelocityTexRO[id.xy].x +
             h_yp * gWaterVelocityTexRO[int2(id.x, id.y + 1)].y - h_ym * gWaterVelocityTexRO[id.xy].y
-        ) / dx;
+        ) / gDeltaX;
 
-        gWaterHeightTexRW[id.xy] = max(0.0f, gWaterHeightPrevTexRO[id.xy] + dhdt * dt);
+        gWaterHeightTexRW[id.xy] = max(0.0f, gWaterHeightPrevTexRO[id.xy] + dhdt * gDeltaTime);
     }
 }

@@ -8,9 +8,9 @@ Texture2D<float> gWaterHeightTexRO;
 Texture2D<float2> gWaterVelocityPrevTexRO;
 RWTexture2D<float2> gWaterVelocityTexRW;
  
-static const float dt = 1.0f / 30.0f;
-static const float dx = 1.0f;
-static const float g = 50.0f;
+static const float gDeltaTime = 1.0f / 30.0f;
+static const float gDeltaX = 1.0f;
+static const float gGravity = 50.0f;
 
 bool isInsideBounds(int3 id)
 {
@@ -26,6 +26,6 @@ void CalcVelocityCS(int3 id : SV_DispatchThreadID)
         float2 dn = gTerrainHeightTexRO[id.xy] + gWaterHeightTexRO[id.xy];
         dn.x -= gTerrainHeightTexRO[int2(id.x - 1, id.y)] + gWaterHeightTexRO[int2(id.x - 1, id.y)];
         dn.y -= gTerrainHeightTexRO[int2(id.x, id.y - 1)] + gWaterHeightTexRO[int2(id.x, id.y - 1)];
-        gWaterVelocityTexRW[id.xy] = gWaterVelocityPrevTexRO[id.xy] - g * dn * dt / dx;
+        gWaterVelocityTexRW[id.xy] = gWaterVelocityPrevTexRO[id.xy] - gGravity * dn * gDeltaTime / gDeltaX;
     }
 }
