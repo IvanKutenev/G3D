@@ -5,33 +5,53 @@ int gWaterHeightTexSzY;
 
 float gTime;
 
-Texture2D<float4> gWaterHeightPrevTexRO;
-Texture2D<float4> gWaterVelocityTexRO;
-RWTexture2D<float4> gWaterHeightTexRW;
+Texture2D<float2> gWaterVelocityTexRO;
+Texture2D<float> gTerrainHeightTexRO;
+Texture2D<float> gWaterHeightPrevTexRO;
+RWTexture2D<float> gWaterHeightTexRW;
  
 static const float dt = 1.0f / 30.0f;
 static const float dx = 1.0f;
+static const float gGenEffMagnitude = 0.05f;
+static const float gGenOscMagnitude = 0.005f;
+static const float gGenFreq = 1.0f;
+
+bool isInsideBounds(int3 id)
+{
+    return id.x > 0 && id.y > 0 && id.x < gWaterHeightTexSzX - 1 && id.y < gWaterHeightTexSzX - 1;
+}
 
 [numthreads(8, 8, 1)]
 void CalcHeightCS(int3 id : SV_DispatchThreadID)
 {
     [branch]
-    if (id.x == 0 || id.x >= gWaterHeightTexSzX - 1 || id.y == 0 || id.y >= gWaterHeightTexSzX - 1)
+    if (!isInsideBounds(id) && id.x == 0)
     {
-        gWaterHeightTexRW[id.xy] = 0.05f + 0.01f * sin(2.0f * gTime);
-        return;
+        gWaterHeightTexRW[id.xy] = gGenEffMagnitude +
+            gGenOscMagnitude * sin(gGenFreq * gTime) -
+            gTerrainHeightTexRO[id.xy];
     }
-
-    float h_xp = gWaterVelocityTexRO[int2(id.x + 1, id.y)].x <= 0.0f ? gWaterHeightPrevTexRO[int2(id.x + 1, id.y)].x : gWaterHeightPrevTexRO[id.xy].x;
-    float h_xm = gWaterVelocityTexRO[id.xy].x >= 0.0f ? gWaterHeightPrevTexRO[int2(id.x - 1, id.y)].x : gWaterHeightPrevTexRO[id.xy].x;
+    else if (!isInsideBounds(id) && id.x != 0)
+    {
+        gWaterHeightTexRW[id.xy] = gWaterHeightPrevTexRO[id.xy];
+    }
+    else
+    {
+        float h_xp = gWaterVelocityTexRO[int2(id.x + 1, id.y)].x <= 0.0f ?
+            gWaterHeightPrevTexRO[int2(id.x + 1, id.y)] : gWaterHeightPrevTexRO[id.xy];
+        float h_xm = gWaterVelocityTexRO[id.xy].x >= 0.0f ?
+            gWaterHeightPrevTexRO[int2(id.x - 1, id.y)] : gWaterHeightPrevTexRO[id.xy];
     
-    float h_yp = gWaterVelocityTexRO[int2(id.x, id.y + 1)].y <= 0.0f ? gWaterHeightPrevTexRO[int2(id.x, id.y + 1)].x : gWaterHeightPrevTexRO[id.xy].x;
-    float h_ym = gWaterVelocityTexRO[id.xy].y >= 0.0f ? gWaterHeightPrevTexRO[int2(id.x, id.y - 1)].x : gWaterHeightPrevTexRO[id.xy].x;
+        float h_yp = gWaterVelocityTexRO[int2(id.x, id.y + 1)].y <= 0.0f ?
+            gWaterHeightPrevTexRO[int2(id.x, id.y + 1)] : gWaterHeightPrevTexRO[id.xy];
+        float h_ym = gWaterVelocityTexRO[id.xy].y >= 0.0f ?
+            gWaterHeightPrevTexRO[int2(id.x, id.y - 1)] : gWaterHeightPrevTexRO[id.xy];
 
-    float dhdt = -(
-        h_xp * gWaterVelocityTexRO[int2(id.x + 1, id.y)].x - h_xm * gWaterVelocityTexRO[id.xy].x +
-        h_yp * gWaterVelocityTexRO[int2(id.x, id.y + 1)].y - h_ym * gWaterVelocityTexRO[id.xy].y
-    ) / dx;
+        float dhdt = -(
+            h_xp * gWaterVelocityTexRO[int2(id.x + 1, id.y)].x - h_xm * gWaterVelocityTexRO[id.xy].x +
+            h_yp * gWaterVelocityTexRO[int2(id.x, id.y + 1)].y - h_ym * gWaterVelocityTexRO[id.xy].y
+        ) / dx;
 
-    gWaterHeightTexRW[id.xy] = max(0.0f, gWaterHeightPrevTexRO[id.xy].x + dhdt * dt);
+        gWaterHeightTexRW[id.xy] = max(0.0f, gWaterHeightPrevTexRO[id.xy] + dhdt * dt);
+    }
 }

@@ -14,8 +14,8 @@ public:
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
 		SHADER_PARAMETER(int, gWaterHeightTexSzX)
 		SHADER_PARAMETER(int, gWaterHeightTexSzY)
-		SHADER_PARAMETER_TEXTURE(Texture2D<float4>, gTerrainHeightTexRO)
-		SHADER_PARAMETER_UAV(RWTexture2D<float4>, gWaterHeightTexRW)
+		SHADER_PARAMETER_TEXTURE(Texture2D<float>, gTerrainHeightTexRO)
+		SHADER_PARAMETER_UAV(RWTexture2D<float>, gWaterHeightTexRW)
 	END_SHADER_PARAMETER_STRUCT()
 public:
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
@@ -32,7 +32,7 @@ public:
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
 		SHADER_PARAMETER(int, gWaterVelocityTexSzX)
 		SHADER_PARAMETER(int, gWaterVelocityTexSzY)
-		SHADER_PARAMETER_UAV(RWTexture2D<float4>, gWaterVelocityTexRW)
+		SHADER_PARAMETER_UAV(RWTexture2D<float2>, gWaterVelocityTexRW)
 	END_SHADER_PARAMETER_STRUCT()
 public:
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
@@ -50,9 +50,10 @@ public:
 		SHADER_PARAMETER(int, gWaterHeightTexSzX)
 		SHADER_PARAMETER(int, gWaterHeightTexSzY)
 		SHADER_PARAMETER(float, gTime)
-		SHADER_PARAMETER_TEXTURE(Texture2D<float4>, gWaterHeightPrevTexRO)
-		SHADER_PARAMETER_TEXTURE(Texture2D<float4>, gWaterVelocityTexRO)
-		SHADER_PARAMETER_UAV(RWTexture2D<float4>, gWaterHeightTexRW)
+		SHADER_PARAMETER_TEXTURE(Texture2D<float2>, gWaterVelocityTexRO)
+		SHADER_PARAMETER_TEXTURE(Texture2D<float>, gTerrainHeightTexRO)
+		SHADER_PARAMETER_TEXTURE(Texture2D<float>, gWaterHeightPrevTexRO)
+		SHADER_PARAMETER_UAV(RWTexture2D<float>, gWaterHeightTexRW)
 	END_SHADER_PARAMETER_STRUCT()
 public:
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
@@ -69,10 +70,10 @@ public:
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
 		SHADER_PARAMETER(int, gWaterVelocityTexSzX)
 		SHADER_PARAMETER(int, gWaterVelocityTexSzY)
-		SHADER_PARAMETER_TEXTURE(Texture2D<float4>, gTerrainHeightTexRO)
-		SHADER_PARAMETER_TEXTURE(Texture2D<float4>, gWaterHeightTexRO)
-		SHADER_PARAMETER_TEXTURE(Texture2D<float4>, gWaterVelocityPrevTexRO)
-		SHADER_PARAMETER_UAV(RWTexture2D<float4>, gWaterVelocityTexRW)
+		SHADER_PARAMETER_TEXTURE(Texture2D<float>, gTerrainHeightTexRO)
+		SHADER_PARAMETER_TEXTURE(Texture2D<float>, gWaterHeightTexRO)
+		SHADER_PARAMETER_TEXTURE(Texture2D<float2>, gWaterVelocityPrevTexRO)
+		SHADER_PARAMETER_UAV(RWTexture2D<float2>, gWaterVelocityTexRW)
 	END_SHADER_PARAMETER_STRUCT()
 public:
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
@@ -94,7 +95,7 @@ bool FWaterSystem::BuildTextures(FPostOpaqueRenderParameters& Parameters)
 		WaterHeightTex = RHICreateTexture2D(
 			DispatchParams.WaterHeightmapRT->SizeX,
 			DispatchParams.WaterHeightmapRT->SizeY,
-			DispatchParams.WaterHeightmapRT->GetFormat(),
+			EPixelFormat::PF_R32_FLOAT,
 			1,
 			1,
 			TexCreate_ShaderResource | TexCreate_UAV,
@@ -115,7 +116,7 @@ bool FWaterSystem::BuildTextures(FPostOpaqueRenderParameters& Parameters)
 		WaterVelocityTex = RHICreateTexture2D(
 			DispatchParams.WaterHeightmapRT->SizeX + 1,
 			DispatchParams.WaterHeightmapRT->SizeY + 1,
-			DispatchParams.WaterHeightmapRT->GetFormat(),
+			EPixelFormat::PF_G32R32F,
 			1,
 			1,
 			TexCreate_ShaderResource | TexCreate_UAV,
@@ -136,7 +137,7 @@ bool FWaterSystem::BuildTextures(FPostOpaqueRenderParameters& Parameters)
 		WaterHeightPrevTex = RHICreateTexture2D(
 			DispatchParams.WaterHeightmapRT->SizeX,
 			DispatchParams.WaterHeightmapRT->SizeY,
-			DispatchParams.WaterHeightmapRT->GetFormat(),
+			EPixelFormat::PF_R32_FLOAT,
 			1,
 			1,
 			TexCreate_ShaderResource | TexCreate_UAV,
@@ -157,7 +158,7 @@ bool FWaterSystem::BuildTextures(FPostOpaqueRenderParameters& Parameters)
 		WaterVelocityPrevTex = RHICreateTexture2D(
 			DispatchParams.WaterHeightmapRT->SizeX + 1,
 			DispatchParams.WaterHeightmapRT->SizeY + 1,
-			DispatchParams.WaterHeightmapRT->GetFormat(),
+			EPixelFormat::PF_G32R32F,
 			1,
 			1,
 			TexCreate_ShaderResource | TexCreate_UAV,
@@ -234,6 +235,7 @@ void FWaterSystem::Calc(FPostOpaqueRenderParameters& Parameters)
 	CalcHeightPassParams.gWaterHeightTexSzY = WaterHeightTex->GetSizeY();
 	CalcHeightPassParams.gTime = IsValid(GWorld) ? UGameplayStatics::GetUnpausedTimeSeconds(GWorld) : 0.0f;
 	CalcHeightPassParams.gWaterVelocityTexRO = WaterVelocityPrevTex;
+	CalcHeightPassParams.gTerrainHeightTexRO = DispatchParams.TerrainHeightmapTex->GetResource()->GetTexture2DRHI();
 	CalcHeightPassParams.gWaterHeightPrevTexRO = WaterHeightPrevTex;
 	CalcHeightPassParams.gWaterHeightTexRW = WaterHeightTexUAV;
 	FComputeShaderUtils::Dispatch(

@@ -3,33 +3,29 @@
 int gWaterVelocityTexSzX;
 int gWaterVelocityTexSzY;
 
-Texture2D<float4> gWaterVelocityPrevTexRO;
-Texture2D<float4> gTerrainHeightTexRO;
-Texture2D<float4> gWaterHeightTexRO;
-RWTexture2D<float4> gWaterVelocityTexRW;
+Texture2D<float> gTerrainHeightTexRO;
+Texture2D<float> gWaterHeightTexRO;
+Texture2D<float2> gWaterVelocityPrevTexRO;
+RWTexture2D<float2> gWaterVelocityTexRW;
  
-static const float dt = 1.0f / 60.0f;
+static const float dt = 1.0f / 30.0f;
 static const float dx = 1.0f;
-static const float g = 100.0f;
+static const float g = 50.0f;
+
+bool isInsideBounds(int3 id)
+{
+    return id.x > 0 && id.y > 0 && id.x < gWaterVelocityTexSzX - 1 && id.y < gWaterVelocityTexSzY - 1;
+}
 
 [numthreads(8, 8, 1)]
 void CalcVelocityCS(int3 id : SV_DispatchThreadID)
 {
 	[branch]
-    if (id.x < 1 || id.y < 1)
+    if (isInsideBounds(id))
     {
-        return;
+        float2 dn = gTerrainHeightTexRO[id.xy] + gWaterHeightTexRO[id.xy];
+        dn.x -= gTerrainHeightTexRO[int2(id.x - 1, id.y)] + gWaterHeightTexRO[int2(id.x - 1, id.y)];
+        dn.y -= gTerrainHeightTexRO[int2(id.x, id.y - 1)] + gWaterHeightTexRO[int2(id.x, id.y - 1)];
+        gWaterVelocityTexRW[id.xy] = gWaterVelocityPrevTexRO[id.xy] - g * dn * dt / dx;
     }
-    [branch]
-    if (id.x > gWaterVelocityTexSzX - 2 || id.y > gWaterVelocityTexSzY - 2)
-    {
-        return;
-    }
-    
-    float2 n = gTerrainHeightTexRO[id.xy].x + gWaterHeightTexRO[id.xy].x;
-    
-    float n_xm = gTerrainHeightTexRO[int2(id.x - 1, id.y)] + gWaterHeightTexRO[int2(id.x - 1, id.y)];
-    float n_ym = gTerrainHeightTexRO[int2(id.x, id.y - 1)] + gWaterHeightTexRO[int2(id.x, id.y - 1)];
-    
-    gWaterVelocityTexRW[id.xy] = float4(gWaterVelocityPrevTexRO[id.xy].xy - g * dt / dx * (n - float2(n_xm, n_ym)), 0.0f, 0.0f);
 }

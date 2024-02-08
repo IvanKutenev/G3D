@@ -3,15 +3,19 @@
 int gWaterVelocityTexSzX;
 int gWaterVelocityTexSzY;
 
-RWTexture2D<float4> gWaterVelocityTexRW;
+RWTexture2D<float2> gWaterVelocityTexRW;
+
+bool isInBounds(int3 id)
+{
+    return id.x >= 0 && id.y >= 0 && id.x < gWaterVelocityTexSzX && id.y < gWaterVelocityTexSzY;
+}
 
 [numthreads(8, 8, 1)]
-void InitVelocityCS(int3 dispatchThreadId : SV_DispatchThreadID)
+void InitVelocityCS(int3 id : SV_DispatchThreadID)
 {
     [branch]
-    if (dispatchThreadId.x >= gWaterVelocityTexSzX || dispatchThreadId.y >= gWaterVelocityTexSzY)
+    if (isInBounds(id))
     {
-        return;
+        gWaterVelocityTexRW[id.xy] = 0.0f;
     }
-    gWaterVelocityTexRW[dispatchThreadId.xy] = 0.0f;
 }
