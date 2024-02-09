@@ -13,8 +13,8 @@ RWTexture2D<float> gWaterHeightTexRW;
 static const float gDeltaTime = 1.0f / 30.0f;
 static const float gDeltaX = 1.0f;
 static const float gGenEffMagnitude = 0.05f;
-static const float gGenOscMagnitude = 0.0025f;
-static const float gGenFreq = 0.25f;
+static const float gGenOscMagnitude = 0.01f;
+static const float gGenFreq = 0.5f;
 
 bool isInsideBounds(int3 id)
 {
@@ -25,10 +25,10 @@ bool isInsideBounds(int3 id)
 void CalcHeightCS(int3 id : SV_DispatchThreadID)
 {
     [branch]
-    if (!isInsideBounds(id) && id.x == 0)
+    if (!isInsideBounds(id) && (id.x == 0 || id.y == 0))
     {
         gWaterHeightTexRW[id.xy] = gGenEffMagnitude +
-            gGenOscMagnitude * sin(gGenFreq * gTime) -
+            gGenOscMagnitude * sin(gGenFreq * gTime - id.x - id.y) -
             gTerrainHeightTexRO[id.xy];
     }
     else if (!isInsideBounds(id))
