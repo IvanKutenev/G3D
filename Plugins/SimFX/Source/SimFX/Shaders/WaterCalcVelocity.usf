@@ -31,5 +31,6 @@ void CalcVelocityCS(int3 id : SV_DispatchThreadID)
     else
     {
         gWaterVelocityTexRW[id.xy] = gWaterVelocityPrevTexRO[id.xy];
+
     }
 }
