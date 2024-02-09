@@ -230,10 +230,11 @@ void FWaterSystem::Calc(FPostOpaqueRenderParameters& Parameters)
 	{
 		return;
 	}
+	static float Time = 0.0f;
 	FWaterCalcHeight::FParameters CalcHeightPassParams;
 	CalcHeightPassParams.gWaterHeightTexSzX = WaterHeightTex->GetSizeX();
 	CalcHeightPassParams.gWaterHeightTexSzY = WaterHeightTex->GetSizeY();
-	CalcHeightPassParams.gTime = IsValid(GWorld) ? UGameplayStatics::GetUnpausedTimeSeconds(GWorld) : 0.0f;
+	CalcHeightPassParams.gTime = Time;
 	CalcHeightPassParams.gWaterVelocityTexRO = WaterVelocityPrevTex;
 	CalcHeightPassParams.gTerrainHeightTexRO = DispatchParams.TerrainHeightmapTex->GetResource()->GetTexture2DRHI();
 	CalcHeightPassParams.gWaterHeightPrevTexRO = WaterHeightPrevTex;
@@ -248,6 +249,7 @@ void FWaterSystem::Calc(FPostOpaqueRenderParameters& Parameters)
 			1
 		)
 	);
+	Time += 1.0f / 30.0f;
 	WaterHeightTex.Swap(WaterHeightPrevTex);
 	WaterHeightTexUAV.Swap(WaterHeightPrevTexUAV);
 	TShaderMapRef<FWaterCalcVelocity> CalcVelocityCS(GetGlobalShaderMap(GMaxRHIFeatureLevel));

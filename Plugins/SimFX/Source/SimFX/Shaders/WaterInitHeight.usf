@@ -6,7 +6,7 @@ int gWaterHeightTexSzY;
 Texture2D<float> gTerrainHeightTexRO;
 RWTexture2D<float> gWaterHeightTexRW;
 
-static const float gInitWaterHeight = 0.1f;
+static const float gInitWaterHeight = 0.05f;
 
 bool isInBounds(int3 id)
 {
