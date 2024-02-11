@@ -6,6 +6,35 @@
 #include "Kismet/GameplayStatics.h"
 #include "GlobalShader.h"
 
+namespace FWaterSystemLocal
+{
+	bool CreateTex2d(FTexture2DRHIRef& Tex, FUnorderedAccessViewRHIRef& TexUAV, uint32 SizeX, uint32 SizeY, uint8 Format)
+	{
+		if (!Tex.IsValid())
+		{
+			FRHIResourceCreateInfo CreateInfo;
+			Tex = RHICreateTexture2D(
+				SizeX,
+				SizeY,
+				Format,
+				1,
+				1,
+				TexCreate_ShaderResource | TexCreate_UAV,
+				CreateInfo);
+			if (!Tex.IsValid())
+			{
+				return false;
+			}
+			TexUAV = RHICreateUnorderedAccessView(Tex);
+			if (!TexUAV.IsValid())
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+};
+
 class SIMFX_API FWaterInitHeight : public FGlobalShader
 {
 public:
@@ -89,89 +118,41 @@ IMPLEMENT_GLOBAL_SHADER(FWaterCalcVelocity, "/Shaders/WaterCalcVelocity.usf", "C
 
 bool FWaterSystem::BuildTextures(FPostOpaqueRenderParameters& Parameters)
 {
-	if (!WaterHeightTex.IsValid())
+	if (!FWaterSystemLocal::CreateTex2d(
+		WaterHeightTex,
+		WaterHeightTexUAV,
+		DispatchParams.WaterHeightmapRT->SizeX,
+		DispatchParams.WaterHeightmapRT->SizeY,
+		EPixelFormat::PF_R32_FLOAT))
 	{
-		FRHIResourceCreateInfo CreateInfo;
-		WaterHeightTex = RHICreateTexture2D(
-			DispatchParams.WaterHeightmapRT->SizeX,
-			DispatchParams.WaterHeightmapRT->SizeY,
-			EPixelFormat::PF_R32_FLOAT,
-			1,
-			1,
-			TexCreate_ShaderResource | TexCreate_UAV,
-			CreateInfo);
-		if (!WaterHeightTex.IsValid())
-		{
-			return false;
-		}
-		WaterHeightTexUAV = RHICreateUnorderedAccessView(WaterHeightTex);
-		if (!WaterHeightTexUAV.IsValid())
-		{
-			return false;
-		}
+		return false;
 	}
-	if (!WaterVelocityTex.IsValid())
+	if (!FWaterSystemLocal::CreateTex2d(
+		WaterHeightPrevTex,
+		WaterHeightPrevTexUAV,
+		DispatchParams.WaterHeightmapRT->SizeX,
+		DispatchParams.WaterHeightmapRT->SizeY,
+		EPixelFormat::PF_R32_FLOAT))
 	{
-		FRHIResourceCreateInfo CreateInfo;
-		WaterVelocityTex = RHICreateTexture2D(
-			DispatchParams.WaterHeightmapRT->SizeX + 1,
-			DispatchParams.WaterHeightmapRT->SizeY + 1,
-			EPixelFormat::PF_G32R32F,
-			1,
-			1,
-			TexCreate_ShaderResource | TexCreate_UAV,
-			CreateInfo);
-		if (!WaterVelocityTex.IsValid())
-		{
-			return false;
-		}
-		WaterVelocityTexUAV = RHICreateUnorderedAccessView(WaterVelocityTex);
-		if (!WaterVelocityTexUAV.IsValid())
-		{
-			return false;
-		}
+		return false;
 	}
-	if (!WaterHeightPrevTex.IsValid())
+	if (!FWaterSystemLocal::CreateTex2d(
+		WaterVelocityTex,
+		WaterVelocityTexUAV,
+		DispatchParams.WaterHeightmapRT->SizeX + 1,
+		DispatchParams.WaterHeightmapRT->SizeY + 1,
+		EPixelFormat::PF_G32R32F))
 	{
-		FRHIResourceCreateInfo CreateInfo;
-		WaterHeightPrevTex = RHICreateTexture2D(
-			DispatchParams.WaterHeightmapRT->SizeX,
-			DispatchParams.WaterHeightmapRT->SizeY,
-			EPixelFormat::PF_R32_FLOAT,
-			1,
-			1,
-			TexCreate_ShaderResource | TexCreate_UAV,
-			CreateInfo);
-		if (!WaterHeightPrevTex.IsValid())
-		{
-			return false;
-		}
-		WaterHeightPrevTexUAV = RHICreateUnorderedAccessView(WaterHeightPrevTex);
-		if (!WaterHeightPrevTexUAV.IsValid())
-		{
-			return false;
-		}
+		return false;
 	}
-	if (!WaterVelocityPrevTex.IsValid())
+	if (!FWaterSystemLocal::CreateTex2d(
+		WaterVelocityPrevTex,
+		WaterVelocityPrevTexUAV,
+		DispatchParams.WaterHeightmapRT->SizeX + 1,
+		DispatchParams.WaterHeightmapRT->SizeY + 1,
+		EPixelFormat::PF_G32R32F))
 	{
-		FRHIResourceCreateInfo CreateInfo;
-		WaterVelocityPrevTex = RHICreateTexture2D(
-			DispatchParams.WaterHeightmapRT->SizeX + 1,
-			DispatchParams.WaterHeightmapRT->SizeY + 1,
-			EPixelFormat::PF_G32R32F,
-			1,
-			1,
-			TexCreate_ShaderResource | TexCreate_UAV,
-			CreateInfo);
-		if (!WaterVelocityPrevTex.IsValid())
-		{
-			return false;
-		}
-		WaterVelocityPrevTexUAV = RHICreateUnorderedAccessView(WaterVelocityPrevTex);
-		if (!WaterVelocityPrevTexUAV.IsValid())
-		{
-			return false;
-		}
+		return false;
 	}
 	return true;
 }
@@ -198,8 +179,6 @@ void FWaterSystem::Init(FPostOpaqueRenderParameters& Parameters)
 			1
 		)
 	);
-	WaterHeightTex.Swap(WaterHeightPrevTex);
-	WaterHeightTexUAV.Swap(WaterHeightPrevTexUAV);
 	TShaderMapRef<FWaterInitVelocity> InitVelocityCS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 	if (!InitVelocityCS.IsValid())
 	{
@@ -219,12 +198,14 @@ void FWaterSystem::Init(FPostOpaqueRenderParameters& Parameters)
 			1
 		)
 	);
-	WaterVelocityTex.Swap(WaterVelocityPrevTex);
-	WaterVelocityTexUAV.Swap(WaterVelocityPrevTexUAV);
 }
 
 void FWaterSystem::Calc(FPostOpaqueRenderParameters& Parameters)
 {
+	WaterHeightTex.Swap(WaterHeightPrevTex);
+	WaterHeightTexUAV.Swap(WaterHeightPrevTexUAV);
+	WaterVelocityTex.Swap(WaterVelocityPrevTex);
+	WaterVelocityTexUAV.Swap(WaterVelocityPrevTexUAV);
 	TShaderMapRef<FWaterCalcHeight> CalcHeightCS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 	if (!CalcHeightCS.IsValid())
 	{
@@ -250,8 +231,6 @@ void FWaterSystem::Calc(FPostOpaqueRenderParameters& Parameters)
 		)
 	);
 	Time += 1.0f / 30.0f;
-	WaterHeightTex.Swap(WaterHeightPrevTex);
-	WaterHeightTexUAV.Swap(WaterHeightPrevTexUAV);
 	TShaderMapRef<FWaterCalcVelocity> CalcVelocityCS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 	if (!CalcVelocityCS.IsValid())
 	{
@@ -260,7 +239,7 @@ void FWaterSystem::Calc(FPostOpaqueRenderParameters& Parameters)
 	FWaterCalcVelocity::FParameters CalcVelocityPassParams;
 	CalcVelocityPassParams.gWaterVelocityTexSzX = WaterHeightTex->GetSizeX() + 1;
 	CalcVelocityPassParams.gWaterVelocityTexSzY = WaterHeightTex->GetSizeY() + 1;
-	CalcVelocityPassParams.gWaterHeightTexRO = WaterHeightPrevTex;
+	CalcVelocityPassParams.gWaterHeightTexRO = WaterHeightTex;
 	CalcVelocityPassParams.gTerrainHeightTexRO = DispatchParams.TerrainHeightmapTex->GetResource()->GetTexture2DRHI();
 	CalcVelocityPassParams.gWaterVelocityPrevTexRO = WaterVelocityPrevTex;
 	CalcVelocityPassParams.gWaterVelocityTexRW = WaterVelocityTexUAV;
@@ -269,13 +248,11 @@ void FWaterSystem::Calc(FPostOpaqueRenderParameters& Parameters)
 		CalcVelocityCS,
 		CalcVelocityPassParams,
 		FIntVector(
-			WaterHeightTex->GetSizeX() / 8 + 1,
-			WaterHeightTex->GetSizeY() / 8 + 1,
+			(WaterHeightTex->GetSizeX() + 1) / 8 + 1,
+			(WaterHeightTex->GetSizeY() + 1) / 8 + 1,
 			1
 		)
 	);
-	WaterVelocityTex.Swap(WaterVelocityPrevTex);
-	WaterVelocityTexUAV.Swap(WaterVelocityPrevTexUAV);
 }
 
 void FWaterSystem::Copy(FPostOpaqueRenderParameters& Parameters)
