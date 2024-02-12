@@ -16,8 +16,17 @@ public:
 
 private:
     UPROPERTY()
-    UTexture2D* TerrainHeightmapTex;
+    UTexture2D* TerrainHeightMapTex;
 
     UPROPERTY()
-    UTextureRenderTarget2D* WaterHeightmapRT;
+    UTextureRenderTarget2D* WaterHeightMapRT;
+
+    UPROPERTY()
+    UTextureRenderTarget2D* WaterNormalMapRT;
+
+    UPROPERTY()
+    UTextureRenderTarget2D* WaterFoamMapRT;
+
+    UPROPERTY()
+    UTextureRenderTarget2D* WaterFlowMapRT;
 };

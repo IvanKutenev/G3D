@@ -7,8 +7,11 @@
  
 struct SIMFX_API FDispatchParams
 {
-	UTextureRenderTarget2D* WaterHeightmapRT;
-	UTexture2D* TerrainHeightmapTex;
+	UTexture2D* TerrainHeightMapTex;
+	UTextureRenderTarget2D* WaterHeightMapRT;
+	UTextureRenderTarget2D* WaterNormalMapRT;
+	UTextureRenderTarget2D* WaterFoamMapRT;
+	UTextureRenderTarget2D* WaterFlowMapRT;
 };
  
 class SIMFX_API FWaterSystem {
@@ -29,33 +32,75 @@ public:
 			RendererDelegateHandle.Reset();
 		}
 	}
-	void SetWaterHeightmapRT(UTextureRenderTarget2D* WaterHeightmapRT)
+	void SetTerrainHeightMapTex(UTexture2D* TerrainHeightMapTex)
 	{
 		FScopeLock ParamsLock(&DispatchParamsGuard);
-		if (!IsValid(WaterHeightmapRT))
+		if (!IsValid(TerrainHeightMapTex))
 		{
 			return;
 		}
-		if (IsValid(DispatchParams.WaterHeightmapRT))
+		if (IsValid(DispatchParams.TerrainHeightMapTex))
 		{
-			DispatchParams.WaterHeightmapRT->RemoveFromRoot();
+			DispatchParams.TerrainHeightMapTex->RemoveFromRoot();
 		}
-		WaterHeightmapRT->AddToRoot();
-		DispatchParams.WaterHeightmapRT = WaterHeightmapRT;
+		TerrainHeightMapTex->AddToRoot();
+		DispatchParams.TerrainHeightMapTex = TerrainHeightMapTex;
 	}
-	void SetTerrainHeightmapTex(UTexture2D* TerrainHeightmapTex)
+	void SetWaterHeightMapRT(UTextureRenderTarget2D* WaterHeightMapRT)
 	{
 		FScopeLock ParamsLock(&DispatchParamsGuard);
-		if (!IsValid(TerrainHeightmapTex))
+		if (!IsValid(WaterHeightMapRT))
 		{
 			return;
 		}
-		if (IsValid(DispatchParams.TerrainHeightmapTex))
+		if (IsValid(DispatchParams.WaterHeightMapRT))
 		{
-			DispatchParams.TerrainHeightmapTex->RemoveFromRoot();
+			DispatchParams.WaterHeightMapRT->RemoveFromRoot();
 		}
-		TerrainHeightmapTex->AddToRoot();
-		DispatchParams.TerrainHeightmapTex = TerrainHeightmapTex;
+		WaterHeightMapRT->AddToRoot();
+		DispatchParams.WaterHeightMapRT = WaterHeightMapRT;
+	}
+	void SetWaterFlowMapRT(UTextureRenderTarget2D* WaterFlowMapRT)
+	{
+		FScopeLock ParamsLock(&DispatchParamsGuard);
+		if (!IsValid(WaterFlowMapRT))
+		{
+			return;
+		}
+		if (IsValid(DispatchParams.WaterFlowMapRT))
+		{
+			DispatchParams.WaterFlowMapRT->RemoveFromRoot();
+		}
+		WaterFlowMapRT->AddToRoot();
+		DispatchParams.WaterFlowMapRT = WaterFlowMapRT;
+	}
+	void SetWaterNormalMapRT(UTextureRenderTarget2D* WaterNormalMapRT)
+	{
+		FScopeLock ParamsLock(&DispatchParamsGuard);
+		if (!IsValid(WaterNormalMapRT))
+		{
+			return;
+		}
+		if (IsValid(DispatchParams.WaterNormalMapRT))
+		{
+			DispatchParams.WaterNormalMapRT->RemoveFromRoot();
+		}
+		WaterNormalMapRT->AddToRoot();
+		DispatchParams.WaterNormalMapRT = WaterNormalMapRT;
+	}
+	void SetWaterFoamMapRT(UTextureRenderTarget2D* WaterFoamMapRT)
+	{
+		FScopeLock ParamsLock(&DispatchParamsGuard);
+		if (!IsValid(WaterFoamMapRT))
+		{
+			return;
+		}
+		if (IsValid(DispatchParams.WaterFoamMapRT))
+		{
+			DispatchParams.WaterFoamMapRT->RemoveFromRoot();
+		}
+		WaterFoamMapRT->AddToRoot();
+		DispatchParams.WaterFoamMapRT = WaterFoamMapRT;
 	}
 
 private:
@@ -84,4 +129,10 @@ private:
 
 	FTexture2DRHIRef WaterVelocityPrevTex;
 	FUnorderedAccessViewRHIRef WaterVelocityPrevTexUAV;
+
+	FTexture2DRHIRef WaterNormalTex;
+	FUnorderedAccessViewRHIRef WaterNormalTexUAV;
+
+	FTexture2DRHIRef WaterFoamTex;
+	FUnorderedAccessViewRHIRef WaterFoamTexUAV;
 };

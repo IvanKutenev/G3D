@@ -1,21 +1,44 @@
 #include "/Engine/Public/Platform.ush"
 
-int gWaterVelocityTexSzX;
-int gWaterVelocityTexSzY;
+int gWaterHeightTexSzX;
+int gWaterHeightTexSzY;
 
-RWTexture2D<float2> gWaterVelocityTexRW;
+Texture2D<float> gTerrainHeightTexRO;
+Texture2D<float> gWaterHeightTexRO;
+RWTexture2D<float4> gWaterNormalTexRW;
+
+SamplerState gBilinearSampler;
+
+static const float gScale = 100.0f;
 
 bool isInBounds(int3 id)
 {
-    return id.x >= 0 && id.y >= 0 && id.x < gWaterVelocityTexSzX && id.y < gWaterVelocityTexSzY;
+    return id.x >= 0 && id.y >= 0 && id.x < gWaterHeightTexSzX && id.y < gWaterHeightTexSzY;
 }
 
 [numthreads(8, 8, 1)]
-void InitVelocityCS(int3 id : SV_DispatchThreadID)
+void CalcNormalCS(int3 id : SV_DispatchThreadID)
 {
     [branch]
     if (isInBounds(id))
     {
-        gWaterVelocityTexRW[id.xy] = 0.0f;
+        gWaterNormalTexRW[id.xy] = float3(0.0f, 0.0f, 1.0f);
     }
+    float2 texSz = float2(gWaterHeightTexSzX, gWaterHeightTexSzY);
+    float2 texC = float2(id.xy) / (texSz - 1.0f);
+    float h_px = gWaterHeightTexRO.SampleLevel(gBilinearSampler, texC + float2(0.5f, 0.0f) / texSz, 0.0f);
+    float H_px = gTerrainHeightTexRO.SampleLevel(gBilinearSampler, texC + float2(0.5f, 0.0f) / texSz, 0.0f);
+    float h_py = gWaterHeightTexRO.SampleLevel(gBilinearSampler, texC + float2(0.0f, 0.5f) / texSz, 0.0f);
+    float H_py = gTerrainHeightTexRO.SampleLevel(gBilinearSampler, texC + float2(0.0f, 0.5f) / texSz, 0.0f);
+    float h_mx = gWaterHeightTexRO.SampleLevel(gBilinearSampler, texC - float2(0.5f, 0.0f) / texSz, 0.0f);
+    float H_mx = gTerrainHeightTexRO.SampleLevel(gBilinearSampler, texC - float2(0.5f, 0.0f) / texSz, 0.0f);
+    float h_my = gWaterHeightTexRO.SampleLevel(gBilinearSampler, texC - float2(0.0f, 0.5f) / texSz, 0.0f);
+    float H_my = gTerrainHeightTexRO.SampleLevel(gBilinearSampler, texC - float2(0.0f, 0.5f) / texSz, 0.0f);
+    float3 normal = normalize(
+        cross(
+	        float3(1.0f, 0.0f, gScale * (h_px + H_px - h_mx - H_mx)),
+	        float3(0.0f, 1.0f, gScale * (h_py + H_py - h_my - H_my))
+        )
+    );
+    gWaterNormalTexRW[id.xy] = float4(normal, 0.0f);
 }

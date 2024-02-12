@@ -111,18 +111,59 @@ public:
 	}
 };
 
+class SIMFX_API FWaterCalcNormal : public FGlobalShader
+{
+public:
+	DECLARE_GLOBAL_SHADER(FWaterCalcNormal);
+	SHADER_USE_PARAMETER_STRUCT(FWaterCalcNormal, FGlobalShader);
+	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
+		SHADER_PARAMETER(int, gWaterHeightTexSzX)
+		SHADER_PARAMETER(int, gWaterHeightTexSzY)
+		SHADER_PARAMETER_TEXTURE(Texture2D<float>, gTerrainHeightTexRO)
+		SHADER_PARAMETER_TEXTURE(Texture2D<float>, gWaterHeightTexRO)
+		SHADER_PARAMETER_UAV(RWTexture2D<float4>, gWaterNormalTexRW)
+		SHADER_PARAMETER_SAMPLER(SamplerState, gBilinearSampler)
+	END_SHADER_PARAMETER_STRUCT()
+public:
+	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
+	{
+		FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+	}
+};
+
+class SIMFX_API FWaterCalcFoam : public FGlobalShader
+{
+public:
+	DECLARE_GLOBAL_SHADER(FWaterCalcFoam);
+	SHADER_USE_PARAMETER_STRUCT(FWaterCalcFoam, FGlobalShader);
+	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
+		SHADER_PARAMETER(int, gWaterHeightTexSzX)
+		SHADER_PARAMETER(int, gWaterHeightTexSzY)
+		SHADER_PARAMETER_TEXTURE(Texture2D<float4>, gWaterNormalTexRO)
+		SHADER_PARAMETER_UAV(RWTexture2D<float4>, gWaterFoamTexRW)
+		SHADER_PARAMETER_SAMPLER(SamplerState, gBilinearSampler)
+	END_SHADER_PARAMETER_STRUCT()
+public:
+	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
+	{
+		FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+	}
+};
+
 IMPLEMENT_GLOBAL_SHADER(FWaterInitHeight, "/Shaders/WaterInitHeight.usf", "InitHeightCS", SF_Compute);
 IMPLEMENT_GLOBAL_SHADER(FWaterInitVelocity, "/Shaders/WaterInitVelocity.usf", "InitVelocityCS", SF_Compute);
 IMPLEMENT_GLOBAL_SHADER(FWaterCalcHeight, "/Shaders/WaterCalcHeight.usf", "CalcHeightCS", SF_Compute);
 IMPLEMENT_GLOBAL_SHADER(FWaterCalcVelocity, "/Shaders/WaterCalcVelocity.usf", "CalcVelocityCS", SF_Compute);
+IMPLEMENT_GLOBAL_SHADER(FWaterCalcNormal, "/Shaders/WaterCalcNormal.usf", "CalcNormalCS", SF_Compute);
+IMPLEMENT_GLOBAL_SHADER(FWaterCalcFoam, "/Shaders/WaterCalcFoam.usf", "CalcFoamCS", SF_Compute);
 
 bool FWaterSystem::BuildTextures(FPostOpaqueRenderParameters& Parameters)
 {
 	if (!FWaterSystemLocal::CreateTex2d(
 		WaterHeightTex,
 		WaterHeightTexUAV,
-		DispatchParams.WaterHeightmapRT->SizeX,
-		DispatchParams.WaterHeightmapRT->SizeY,
+		DispatchParams.WaterHeightMapRT->SizeX,
+		DispatchParams.WaterHeightMapRT->SizeY,
 		EPixelFormat::PF_R32_FLOAT))
 	{
 		return false;
@@ -130,8 +171,8 @@ bool FWaterSystem::BuildTextures(FPostOpaqueRenderParameters& Parameters)
 	if (!FWaterSystemLocal::CreateTex2d(
 		WaterHeightPrevTex,
 		WaterHeightPrevTexUAV,
-		DispatchParams.WaterHeightmapRT->SizeX,
-		DispatchParams.WaterHeightmapRT->SizeY,
+		DispatchParams.WaterHeightMapRT->SizeX,
+		DispatchParams.WaterHeightMapRT->SizeY,
 		EPixelFormat::PF_R32_FLOAT))
 	{
 		return false;
@@ -139,8 +180,8 @@ bool FWaterSystem::BuildTextures(FPostOpaqueRenderParameters& Parameters)
 	if (!FWaterSystemLocal::CreateTex2d(
 		WaterVelocityTex,
 		WaterVelocityTexUAV,
-		DispatchParams.WaterHeightmapRT->SizeX + 1,
-		DispatchParams.WaterHeightmapRT->SizeY + 1,
+		DispatchParams.WaterHeightMapRT->SizeX + 1,
+		DispatchParams.WaterHeightMapRT->SizeY + 1,
 		EPixelFormat::PF_G32R32F))
 	{
 		return false;
@@ -148,9 +189,27 @@ bool FWaterSystem::BuildTextures(FPostOpaqueRenderParameters& Parameters)
 	if (!FWaterSystemLocal::CreateTex2d(
 		WaterVelocityPrevTex,
 		WaterVelocityPrevTexUAV,
-		DispatchParams.WaterHeightmapRT->SizeX + 1,
-		DispatchParams.WaterHeightmapRT->SizeY + 1,
+		DispatchParams.WaterHeightMapRT->SizeX + 1,
+		DispatchParams.WaterHeightMapRT->SizeY + 1,
 		EPixelFormat::PF_G32R32F))
+	{
+		return false;
+	}
+	if (!FWaterSystemLocal::CreateTex2d(
+		WaterFoamTex,
+		WaterFoamTexUAV,
+		DispatchParams.WaterHeightMapRT->SizeX,
+		DispatchParams.WaterHeightMapRT->SizeY,
+		EPixelFormat::PF_R32_FLOAT))
+	{
+		return false;
+	}
+	if (!FWaterSystemLocal::CreateTex2d(
+		WaterNormalTex,
+		WaterNormalTexUAV,
+		DispatchParams.WaterHeightMapRT->SizeX,
+		DispatchParams.WaterHeightMapRT->SizeY,
+		EPixelFormat::PF_A32B32G32R32F))
 	{
 		return false;
 	}
@@ -167,7 +226,7 @@ void FWaterSystem::Init(FPostOpaqueRenderParameters& Parameters)
 	FWaterInitHeight::FParameters InitHeightPassParams;
 	InitHeightPassParams.gWaterHeightTexSzX = WaterHeightTex->GetSizeX();
 	InitHeightPassParams.gWaterHeightTexSzY = WaterHeightTex->GetSizeY();
-	InitHeightPassParams.gTerrainHeightTexRO = DispatchParams.TerrainHeightmapTex->GetResource()->GetTexture2DRHI();
+	InitHeightPassParams.gTerrainHeightTexRO = DispatchParams.TerrainHeightMapTex->GetResource()->GetTexture2DRHI();
 	InitHeightPassParams.gWaterHeightTexRW = WaterHeightTexUAV;
 	FComputeShaderUtils::Dispatch(
 		*Parameters.RHICmdList,
@@ -217,7 +276,7 @@ void FWaterSystem::Calc(FPostOpaqueRenderParameters& Parameters)
 	CalcHeightPassParams.gWaterHeightTexSzY = WaterHeightTex->GetSizeY();
 	CalcHeightPassParams.gTime = Time;
 	CalcHeightPassParams.gWaterVelocityTexRO = WaterVelocityPrevTex;
-	CalcHeightPassParams.gTerrainHeightTexRO = DispatchParams.TerrainHeightmapTex->GetResource()->GetTexture2DRHI();
+	CalcHeightPassParams.gTerrainHeightTexRO = DispatchParams.TerrainHeightMapTex->GetResource()->GetTexture2DRHI();
 	CalcHeightPassParams.gWaterHeightPrevTexRO = WaterHeightPrevTex;
 	CalcHeightPassParams.gWaterHeightTexRW = WaterHeightTexUAV;
 	FComputeShaderUtils::Dispatch(
@@ -240,7 +299,7 @@ void FWaterSystem::Calc(FPostOpaqueRenderParameters& Parameters)
 	CalcVelocityPassParams.gWaterVelocityTexSzX = WaterHeightTex->GetSizeX() + 1;
 	CalcVelocityPassParams.gWaterVelocityTexSzY = WaterHeightTex->GetSizeY() + 1;
 	CalcVelocityPassParams.gWaterHeightTexRO = WaterHeightTex;
-	CalcVelocityPassParams.gTerrainHeightTexRO = DispatchParams.TerrainHeightmapTex->GetResource()->GetTexture2DRHI();
+	CalcVelocityPassParams.gTerrainHeightTexRO = DispatchParams.TerrainHeightMapTex->GetResource()->GetTexture2DRHI();
 	CalcVelocityPassParams.gWaterVelocityPrevTexRO = WaterVelocityPrevTex;
 	CalcVelocityPassParams.gWaterVelocityTexRW = WaterVelocityTexUAV;
 	FComputeShaderUtils::Dispatch(
@@ -253,6 +312,49 @@ void FWaterSystem::Calc(FPostOpaqueRenderParameters& Parameters)
 			1
 		)
 	);
+	TShaderMapRef<FWaterCalcNormal> CalcNormalCS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+	if (!CalcNormalCS.IsValid())
+	{
+		return;
+	}
+	FWaterCalcNormal::FParameters CalcNormalPassParams;
+	CalcNormalPassParams.gWaterHeightTexSzX = WaterHeightTex->GetSizeX();
+	CalcNormalPassParams.gWaterHeightTexSzY = WaterHeightTex->GetSizeY();
+	CalcNormalPassParams.gWaterHeightTexRO = WaterHeightTex;
+	CalcNormalPassParams.gTerrainHeightTexRO = DispatchParams.TerrainHeightMapTex->GetResource()->GetTexture2DRHI();
+	CalcNormalPassParams.gWaterNormalTexRW = WaterNormalTexUAV;
+	CalcNormalPassParams.gBilinearSampler = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
+	FComputeShaderUtils::Dispatch(
+		*Parameters.RHICmdList,
+		CalcNormalCS,
+		CalcNormalPassParams,
+		FIntVector(
+			WaterHeightTex->GetSizeX() / 8 + 1,
+			WaterHeightTex->GetSizeY() / 8 + 1,
+			1
+		)
+	);
+	TShaderMapRef<FWaterCalcFoam> CalcFoamCS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+	if (!CalcFoamCS.IsValid())
+	{
+		return;
+	}
+	FWaterCalcFoam::FParameters CalcFoamPassParams;
+	CalcFoamPassParams.gWaterHeightTexSzX = WaterHeightTex->GetSizeX();
+	CalcFoamPassParams.gWaterHeightTexSzY = WaterHeightTex->GetSizeY();
+	CalcFoamPassParams.gWaterNormalTexRO = WaterNormalTex;
+	CalcFoamPassParams.gWaterFoamTexRW = WaterFoamTexUAV;
+	CalcFoamPassParams.gBilinearSampler = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
+	FComputeShaderUtils::Dispatch(
+		*Parameters.RHICmdList,
+		CalcFoamCS,
+		CalcFoamPassParams,
+		FIntVector(
+			WaterHeightTex->GetSizeX() / 8 + 1,
+			WaterHeightTex->GetSizeY() / 8 + 1,
+			1
+		)
+	);
 }
 
 void FWaterSystem::Copy(FPostOpaqueRenderParameters& Parameters)
@@ -260,7 +362,22 @@ void FWaterSystem::Copy(FPostOpaqueRenderParameters& Parameters)
 	FRHICopyTextureInfo CopyInfo;
 	Parameters.RHICmdList->CopyTexture(
 		WaterHeightTex,
-		DispatchParams.WaterHeightmapRT->GetRenderTargetResource()->GetTexture2DRHI(),
+		DispatchParams.WaterHeightMapRT->GetRenderTargetResource()->GetTexture2DRHI(),
+		CopyInfo
+	);
+	Parameters.RHICmdList->CopyTexture(
+		WaterVelocityTex,
+		DispatchParams.WaterFlowMapRT->GetRenderTargetResource()->GetTexture2DRHI(),
+		CopyInfo
+	);
+	Parameters.RHICmdList->CopyTexture(
+		WaterNormalTex,
+		DispatchParams.WaterNormalMapRT->GetRenderTargetResource()->GetTexture2DRHI(),
+		CopyInfo
+	);
+	Parameters.RHICmdList->CopyTexture(
+		WaterFoamTex,
+		DispatchParams.WaterFoamMapRT->GetRenderTargetResource()->GetTexture2DRHI(),
 		CopyInfo
 	);
 }
@@ -268,11 +385,23 @@ void FWaterSystem::Copy(FPostOpaqueRenderParameters& Parameters)
 void FWaterSystem::Dispatch(FPostOpaqueRenderParameters& Parameters)
 {
 	FScopeLock ParamsLock(&DispatchParamsGuard);
-	if (!IsValid(DispatchParams.WaterHeightmapRT))
+	if (!IsValid(DispatchParams.TerrainHeightMapTex))
 	{
 		return;
 	}
-	if (!IsValid(DispatchParams.TerrainHeightmapTex))
+	if (!IsValid(DispatchParams.WaterHeightMapRT))
+	{
+		return;
+	}
+	if (!IsValid(DispatchParams.WaterFlowMapRT))
+	{
+		return;
+	}
+	if (!IsValid(DispatchParams.WaterNormalMapRT))
+	{
+		return;
+	}
+	if (!IsValid(DispatchParams.WaterFoamMapRT))
 	{
 		return;
 	}
