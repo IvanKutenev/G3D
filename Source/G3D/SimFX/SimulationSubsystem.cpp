@@ -33,9 +33,9 @@ USimulationSubsystem::USimulationSubsystem()
 	{
 		SimFxModule->WaterSystem.SetTerrainHeightMapTex(TerrainHeightMapTex);
 		SimFxModule->WaterSystem.SetWaterHeightMapRT(WaterHeightMapRT);
-		SimFxModule->WaterSystem.SetWaterFlowMapRT(WaterHeightMapRT);
-		SimFxModule->WaterSystem.SetWaterNormalMapRT(WaterHeightMapRT);
-		SimFxModule->WaterSystem.SetWaterFoamMapRT(WaterHeightMapRT);
+		SimFxModule->WaterSystem.SetWaterFlowMapRT(WaterFlowMapRT);
+		SimFxModule->WaterSystem.SetWaterNormalMapRT(WaterNormalMapRT);
+		SimFxModule->WaterSystem.SetWaterFoamMapRT(WaterFoamMapRT);
 	}
 }
 

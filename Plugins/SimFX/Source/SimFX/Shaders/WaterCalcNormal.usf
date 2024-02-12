@@ -9,7 +9,7 @@ RWTexture2D<float4> gWaterNormalTexRW;
 
 SamplerState gBilinearSampler;
 
-static const float gScale = 100.0f;
+static const float gScale = 500.0f;
 
 bool isInBounds(int3 id)
 {
@@ -22,7 +22,7 @@ void CalcNormalCS(int3 id : SV_DispatchThreadID)
     [branch]
     if (isInBounds(id))
     {
-        gWaterNormalTexRW[id.xy] = float3(0.0f, 0.0f, 1.0f);
+        gWaterNormalTexRW[id.xy] = 0.0f;
     }
     float2 texSz = float2(gWaterHeightTexSzX, gWaterHeightTexSzY);
     float2 texC = float2(id.xy) / (texSz - 1.0f);

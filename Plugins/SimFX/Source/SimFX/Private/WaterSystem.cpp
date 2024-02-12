@@ -200,7 +200,7 @@ bool FWaterSystem::BuildTextures(FPostOpaqueRenderParameters& Parameters)
 		WaterFoamTexUAV,
 		DispatchParams.WaterHeightMapRT->SizeX,
 		DispatchParams.WaterHeightMapRT->SizeY,
-		EPixelFormat::PF_R32_FLOAT))
+		EPixelFormat::PF_R16F))
 	{
 		return false;
 	}
@@ -209,7 +209,7 @@ bool FWaterSystem::BuildTextures(FPostOpaqueRenderParameters& Parameters)
 		WaterNormalTexUAV,
 		DispatchParams.WaterHeightMapRT->SizeX,
 		DispatchParams.WaterHeightMapRT->SizeY,
-		EPixelFormat::PF_A32B32G32R32F))
+		EPixelFormat::PF_FloatRGBA))
 	{
 		return false;
 	}
@@ -320,8 +320,8 @@ void FWaterSystem::Calc(FPostOpaqueRenderParameters& Parameters)
 	FWaterCalcNormal::FParameters CalcNormalPassParams;
 	CalcNormalPassParams.gWaterHeightTexSzX = WaterHeightTex->GetSizeX();
 	CalcNormalPassParams.gWaterHeightTexSzY = WaterHeightTex->GetSizeY();
-	CalcNormalPassParams.gWaterHeightTexRO = WaterHeightTex;
 	CalcNormalPassParams.gTerrainHeightTexRO = DispatchParams.TerrainHeightMapTex->GetResource()->GetTexture2DRHI();
+	CalcNormalPassParams.gWaterHeightTexRO = WaterHeightTex;
 	CalcNormalPassParams.gWaterNormalTexRW = WaterNormalTexUAV;
 	CalcNormalPassParams.gBilinearSampler = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
 	FComputeShaderUtils::Dispatch(
