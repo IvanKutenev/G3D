@@ -140,7 +140,8 @@ public:
 		SHADER_PARAMETER(int, gWaterHeightTexSzX)
 		SHADER_PARAMETER(int, gWaterHeightTexSzY)
 		SHADER_PARAMETER_TEXTURE(Texture2D<float4>, gWaterNormalTexRO)
-		SHADER_PARAMETER_UAV(RWTexture2D<float4>, gWaterFoamTexRW)
+		SHADER_PARAMETER_TEXTURE(Texture2D<float>, gWaterFoamPrevTexRO)
+		SHADER_PARAMETER_UAV(RWTexture2D<float>, gWaterFoamTexRW)
 		SHADER_PARAMETER_SAMPLER(SamplerState, gBilinearSampler)
 	END_SHADER_PARAMETER_STRUCT()
 public:
@@ -198,6 +199,15 @@ bool FWaterSystem::BuildTextures(FPostOpaqueRenderParameters& Parameters)
 	if (!FWaterSystemLocal::CreateTex2d(
 		WaterFoamTex,
 		WaterFoamTexUAV,
+		DispatchParams.WaterHeightMapRT->SizeX,
+		DispatchParams.WaterHeightMapRT->SizeY,
+		EPixelFormat::PF_R16F))
+	{
+		return false;
+	}
+	if (!FWaterSystemLocal::CreateTex2d(
+		WaterFoamPrevTex,
+		WaterFoamPrevTexUAV,
 		DispatchParams.WaterHeightMapRT->SizeX,
 		DispatchParams.WaterHeightMapRT->SizeY,
 		EPixelFormat::PF_R16F))
@@ -265,6 +275,8 @@ void FWaterSystem::Calc(FPostOpaqueRenderParameters& Parameters)
 	WaterHeightTexUAV.Swap(WaterHeightPrevTexUAV);
 	WaterVelocityTex.Swap(WaterVelocityPrevTex);
 	WaterVelocityTexUAV.Swap(WaterVelocityPrevTexUAV);
+	WaterFoamTex.Swap(WaterFoamPrevTex);
+	WaterFoamTexUAV.Swap(WaterFoamPrevTexUAV);
 	TShaderMapRef<FWaterCalcHeight> CalcHeightCS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 	if (!CalcHeightCS.IsValid())
 	{
@@ -343,6 +355,7 @@ void FWaterSystem::Calc(FPostOpaqueRenderParameters& Parameters)
 	CalcFoamPassParams.gWaterHeightTexSzX = WaterHeightTex->GetSizeX();
 	CalcFoamPassParams.gWaterHeightTexSzY = WaterHeightTex->GetSizeY();
 	CalcFoamPassParams.gWaterNormalTexRO = WaterNormalTex;
+	CalcFoamPassParams.gWaterFoamPrevTexRO = WaterFoamPrevTex;
 	CalcFoamPassParams.gWaterFoamTexRW = WaterFoamTexUAV;
 	CalcFoamPassParams.gBilinearSampler = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
 	FComputeShaderUtils::Dispatch(

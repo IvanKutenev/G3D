@@ -135,4 +135,7 @@ private:
 
 	FTexture2DRHIRef WaterFoamTex;
 	FUnorderedAccessViewRHIRef WaterFoamTexUAV;
+
+	FTexture2DRHIRef WaterFoamPrevTex;
+	FUnorderedAccessViewRHIRef WaterFoamPrevTexUAV;
 };

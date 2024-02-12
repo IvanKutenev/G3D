@@ -4,10 +4,12 @@ int gWaterHeightTexSzX;
 int gWaterHeightTexSzY;
 
 Texture2D<float4> gWaterNormalTexRO;
+Texture2D<float> gWaterFoamPrevTexRO;
 RWTexture2D<float> gWaterFoamTexRW;
 
 SamplerState gBilinearSampler;
 
+static const float gFoamPrevWeight = 0.99f;
 static const float gFoamIntensityMult = 10.0f;
 
 bool isInBounds(int3 id)
@@ -29,5 +31,6 @@ void CalcFoamCS(int3 id : SV_DispatchThreadID)
     float3 n_py = gWaterNormalTexRO.SampleLevel(gBilinearSampler, texC + float2(0.0f, 0.5f) / texSz, 0.0f).xyz;
     float3 n_mx = gWaterNormalTexRO.SampleLevel(gBilinearSampler, texC - float2(0.5f, 0.0f) / texSz, 0.0f).xyz;
     float3 n_my = gWaterNormalTexRO.SampleLevel(gBilinearSampler, texC - float2(0.0f, 0.5f) / texSz, 0.0f).xyz;
-    gWaterFoamTexRW[id.xy] = saturate(gFoamIntensityMult * length(cross(n_px - n_mx, n_py - n_my)));
+    float foamIntensity = saturate(gFoamIntensityMult * length(cross(n_px - n_mx, n_py - n_my)));
+    gWaterFoamTexRW[id.xy] = gFoamPrevWeight * gWaterFoamPrevTexRO[id.xy] + (1.0f - gFoamPrevWeight) * foamIntensity;
 }
