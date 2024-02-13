@@ -1,20 +1,14 @@
 #include "/Engine/Public/Platform.ush"
 
-int gWaterHeightTexSzX;
-int gWaterHeightTexSzY;
-
 Texture2D<float4> gWaterNormalTexRO;
 Texture2D<float> gWaterFoamPrevTexRO;
 RWTexture2D<float> gWaterFoamTexRW;
 
 SamplerState gBilinearSampler;
 
-static const float gFoamPrevWeight = 0.99f;
-static const float gFoamIntensityMult = 10.0f;
-
 bool isInBounds(int3 id)
 {
-    return id.x >= 0 && id.y >= 0 && id.x < gWaterHeightTexSzX && id.y < gWaterHeightTexSzY;
+    return id.x >= 0 && id.y >= 0 && id.x < TEX_SZ && id.y < TEX_SZ;
 }
 
 [numthreads(8, 8, 1)]
@@ -25,12 +19,4 @@ void CalcFoamCS(int3 id : SV_DispatchThreadID)
     {
         gWaterFoamTexRW[id.xy] = 0.0f;
     }
-    float2 texSz = float2(gWaterHeightTexSzX, gWaterHeightTexSzY);
-    float2 texC = float2(id.xy) / (texSz - 1.0f);
-    float3 n_px = gWaterNormalTexRO.SampleLevel(gBilinearSampler, texC + float2(0.5f, 0.0f) / texSz, 0.0f).xyz;
-    float3 n_py = gWaterNormalTexRO.SampleLevel(gBilinearSampler, texC + float2(0.0f, 0.5f) / texSz, 0.0f).xyz;
-    float3 n_mx = gWaterNormalTexRO.SampleLevel(gBilinearSampler, texC - float2(0.5f, 0.0f) / texSz, 0.0f).xyz;
-    float3 n_my = gWaterNormalTexRO.SampleLevel(gBilinearSampler, texC - float2(0.0f, 0.5f) / texSz, 0.0f).xyz;
-    float foamIntensity = gFoamIntensityMult * length(cross(n_px - n_mx, n_py - n_my));
-    gWaterFoamTexRW[id.xy] = saturate(gFoamPrevWeight * gWaterFoamPrevTexRO[id.xy] + (1.0f - gFoamPrevWeight) * foamIntensity);
 }

@@ -1,20 +1,13 @@
 #include "/Engine/Public/Platform.ush"
- 
-int gWaterVelocityTexSzX;
-int gWaterVelocityTexSzY;
 
 Texture2D<float> gTerrainHeightTexRO;
 Texture2D<float> gWaterHeightTexRO;
 Texture2D<float2> gWaterVelocityPrevTexRO;
 RWTexture2D<float2> gWaterVelocityTexRW;
- 
-static const float gDeltaTime = 1.0f / 30.0f;
-static const float gDeltaX = 1.0f;
-static const float gGravity = 50.0f;
 
 bool isInsideBounds(int3 id)
 {
-    return id.x > 0 && id.y > 0 && id.x < gWaterVelocityTexSzX - 1 && id.y < gWaterVelocityTexSzY - 1;
+    return id.x > 0 && id.y > 0 && id.x < TEX_SZ && id.y < TEX_SZ;
 }
 
 [numthreads(8, 8, 1)]
@@ -23,14 +16,16 @@ void CalcVelocityCS(int3 id : SV_DispatchThreadID)
 	[branch]
     if (isInsideBounds(id))
     {
-        float2 dn = gTerrainHeightTexRO[id.xy] + gWaterHeightTexRO[id.xy];
-        dn.x -= gTerrainHeightTexRO[int2(id.x - 1, id.y)] + gWaterHeightTexRO[int2(id.x - 1, id.y)];
-        dn.y -= gTerrainHeightTexRO[int2(id.x, id.y - 1)] + gWaterHeightTexRO[int2(id.x, id.y - 1)];
-        gWaterVelocityTexRW[id.xy] = gWaterVelocityPrevTexRO[id.xy] - gGravity * dn * gDeltaTime / gDeltaX;
+        float2 dn = TERRAIN_SCALE * gTerrainHeightTexRO[id.xy] + gWaterHeightTexRO[id.xy];
+        dn.x -= TERRAIN_SCALE * gTerrainHeightTexRO[int2(id.x - 1, id.y)] + gWaterHeightTexRO[int2(id.x - 1, id.y)];
+        dn.y -= TERRAIN_SCALE * gTerrainHeightTexRO[int2(id.x, id.y - 1)] + gWaterHeightTexRO[int2(id.x, id.y - 1)];
+        float2 newVelocity = gWaterVelocityPrevTexRO[id.xy] - dn * GRAVITY_ACC * DELTA_TIME / DELTA_X;
+        float newVelocityLen = length(newVelocity);
+        gWaterVelocityTexRW[id.xy] = newVelocityLen > 0.0f ? newVelocity / newVelocityLen * min(newVelocityLen, ALPHA * DELTA_X / DELTA_TIME) : 0.0f;
+
     }
     else
     {
         gWaterVelocityTexRW[id.xy] = gWaterVelocityPrevTexRO[id.xy];
-
     }
 }

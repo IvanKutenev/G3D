@@ -1,13 +1,11 @@
 #include "/Engine/Public/Platform.ush"
 
-int gWaterVelocityTexSzX;
-int gWaterVelocityTexSzY;
-
+Texture2D<float> gTerrainHeightTexRO;
 RWTexture2D<float2> gWaterVelocityTexRW;
 
 bool isInBounds(int3 id)
 {
-    return id.x >= 0 && id.y >= 0 && id.x < gWaterVelocityTexSzX && id.y < gWaterVelocityTexSzY;
+    return id.x >= 0 && id.y >= 0 && id.x <= TEX_SZ && id.y <= TEX_SZ;
 }
 
 [numthreads(8, 8, 1)]
@@ -16,6 +14,6 @@ void InitVelocityCS(int3 id : SV_DispatchThreadID)
     [branch]
     if (isInBounds(id))
     {
-        gWaterVelocityTexRW[id.xy] = 0.0f;
+       gWaterVelocityTexRW[id.xy] = 0.0f;
     }
 }

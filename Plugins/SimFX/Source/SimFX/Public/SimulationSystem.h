@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 #include "EngineModule.h"
 #include "GenericPlatform/GenericPlatformMisc.h"
- 
+
 class SIMFX_API FSimulationSystem {
 public:
 	virtual ~FSimulationSystem() {}

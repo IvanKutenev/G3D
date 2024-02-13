@@ -1,19 +1,14 @@
 #include "/Engine/Public/Platform.ush"
 
-int gWaterHeightTexSzX;
-int gWaterHeightTexSzY;
-
 Texture2D<float> gTerrainHeightTexRO;
 Texture2D<float> gWaterHeightTexRO;
 RWTexture2D<float4> gWaterNormalTexRW;
 
 SamplerState gBilinearSampler;
 
-static const float gScale = 500.0f;
-
 bool isInBounds(int3 id)
 {
-    return id.x >= 0 && id.y >= 0 && id.x < gWaterHeightTexSzX && id.y < gWaterHeightTexSzY;
+    return id.x >= 0 && id.y >= 0 && id.x < TEX_SZ && id.y < TEX_SZ;
 }
 
 [numthreads(8, 8, 1)]
@@ -24,7 +19,7 @@ void CalcNormalCS(int3 id : SV_DispatchThreadID)
     {
         gWaterNormalTexRW[id.xy] = 0.0f;
     }
-    float2 texSz = float2(gWaterHeightTexSzX, gWaterHeightTexSzY);
+    float2 texSz = float2(TEX_SZ, TEX_SZ);
     float2 texC = float2(id.xy) / (texSz - 1.0f);
     float h_px = gWaterHeightTexRO.SampleLevel(gBilinearSampler, texC + float2(0.5f, 0.0f) / texSz, 0.0f);
     float H_px = gTerrainHeightTexRO.SampleLevel(gBilinearSampler, texC + float2(0.5f, 0.0f) / texSz, 0.0f);
@@ -36,8 +31,8 @@ void CalcNormalCS(int3 id : SV_DispatchThreadID)
     float H_my = gTerrainHeightTexRO.SampleLevel(gBilinearSampler, texC - float2(0.0f, 0.5f) / texSz, 0.0f);
     float3 normal = normalize(
         cross(
-	        float3(1.0f, 0.0f, gScale * (h_px + H_px - h_mx - H_mx)),
-	        float3(0.0f, 1.0f, gScale * (h_py + H_py - h_my - H_my))
+	        float3(1.0f, 0.0f, (h_px - h_mx) + TERRAIN_SCALE * (H_px - H_mx)),
+	        float3(0.0f, 1.0f, (h_py - h_my) + TERRAIN_SCALE * (H_py - H_my))
         )
     );
     gWaterNormalTexRW[id.xy] = float4(normal, 0.0f);

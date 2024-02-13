@@ -3,6 +3,14 @@
 #include "SimulationSystem.h"
 #include "Engine/TextureRenderTarget2D.h"
  
+#define GRID_SZ 845.0f
+#define TEX_SZ 512.0f
+#define DELTA_TIME (1.0f / 60.0f)
+#define DELTA_X (GRID_SZ / TEX_SZ)
+#define TERRAIN_SCALE 500.0f
+#define GRAVITY_ACC 9.8f
+#define ALPHA 0.5f
+
 struct SIMFX_API FDispatchParams
 {
 	UTexture2D* TerrainHeightMapTex;
@@ -45,6 +53,7 @@ protected:
 
 private:
 	void Swap();
+	void ClearData(FPostOpaqueRenderParameters& Parameters);
 	void InitHeight(FPostOpaqueRenderParameters& Parameters);
 	void InitVelocity(FPostOpaqueRenderParameters& Parameters);
 	void CalcHeight(FPostOpaqueRenderParameters& Parameters);
@@ -53,6 +62,7 @@ private:
 	void CalcFoam(FPostOpaqueRenderParameters& Parameters);
 
 private:
+	float Time = 0.0f;
 	bool NeedInit = true;
 	FDispatchParams DispatchParams;
 

@@ -1,24 +1,23 @@
 #include "/Engine/Public/Platform.ush"
 
-int gWaterHeightTexSzX;
-int gWaterHeightTexSzY;
-
 Texture2D<float> gTerrainHeightTexRO;
 RWTexture2D<float> gWaterHeightTexRW;
 
-static const float gInitWaterHeight = 0.05f;
-
 bool isInBounds(int3 id)
 {
-    return id.x >= 0 && id.y >= 0 && id.x < gWaterHeightTexSzX && id.y < gWaterHeightTexSzY;
+    return id.x >= 0 && id.y >= 0 && id.x < TEX_SZ && id.y < TEX_SZ;
 }
 
 [numthreads(8, 8, 1)]
 void InitHeightCS(int3 id : SV_DispatchThreadID)
 {
-   [branch]
-    if (isInBounds(id))
+    [branch]
+    if (isInBounds(id) && length(id.xy - 256) < 20)
     {
-        gWaterHeightTexRW[id.xy] = gInitWaterHeight - gTerrainHeightTexRO[id.xy];
+        gWaterHeightTexRW[id.xy] = 50.0f;
+    }
+    else
+    {
+        gWaterHeightTexRW[id.xy] = max(0.0f, 50.0f - TERRAIN_SCALE * gTerrainHeightTexRO[id.xy]);
     }
 }
