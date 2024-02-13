@@ -51,7 +51,6 @@ private:
 	void CalcVelocity(FPostOpaqueRenderParameters& Parameters);
 	void CalcNormal(FPostOpaqueRenderParameters& Parameters);
 	void CalcFoam(FPostOpaqueRenderParameters& Parameters);
-	void CopyResult(FPostOpaqueRenderParameters& Parameters);
 
 private:
 	bool NeedInit = true;

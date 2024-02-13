@@ -242,6 +242,13 @@ void FWaterSystem::CalcHeight(FPostOpaqueRenderParameters& Parameters)
 		)
 	);
 	Time += 1.0f / 30.0f;
+
+	FRHICopyTextureInfo CopyInfo;
+	Parameters.RHICmdList->CopyTexture(
+		WaterHeightTex,
+		DispatchParams.WaterHeightMapRT->GetRenderTargetResource()->GetTexture2DRHI(),
+		CopyInfo
+	);
 }
 
 void FWaterSystem::CalcVelocity(FPostOpaqueRenderParameters& Parameters)
@@ -267,6 +274,13 @@ void FWaterSystem::CalcVelocity(FPostOpaqueRenderParameters& Parameters)
 			(WaterHeightTex->GetSizeY() + 1) / 8 + 1,
 			1
 		)
+	);
+
+	FRHICopyTextureInfo CopyInfo;
+	Parameters.RHICmdList->CopyTexture(
+		WaterVelocityTex,
+		DispatchParams.WaterFlowMapRT->GetRenderTargetResource()->GetTexture2DRHI(),
+		CopyInfo
 	);
 }
 
@@ -294,6 +308,13 @@ void FWaterSystem::CalcNormal(FPostOpaqueRenderParameters& Parameters)
 			1
 		)
 	);
+
+	FRHICopyTextureInfo CopyInfo;
+	Parameters.RHICmdList->CopyTexture(
+		WaterNormalTex,
+		DispatchParams.WaterNormalMapRT->GetRenderTargetResource()->GetTexture2DRHI(),
+		CopyInfo
+	);
 }
 
 void FWaterSystem::CalcFoam(FPostOpaqueRenderParameters& Parameters)
@@ -320,26 +341,8 @@ void FWaterSystem::CalcFoam(FPostOpaqueRenderParameters& Parameters)
 			1
 		)
 	);
-}
 
-void FWaterSystem::CopyResult(FPostOpaqueRenderParameters& Parameters)
-{
 	FRHICopyTextureInfo CopyInfo;
-	Parameters.RHICmdList->CopyTexture(
-		WaterHeightTex,
-		DispatchParams.WaterHeightMapRT->GetRenderTargetResource()->GetTexture2DRHI(),
-		CopyInfo
-	);
-	Parameters.RHICmdList->CopyTexture(
-		WaterVelocityTex,
-		DispatchParams.WaterFlowMapRT->GetRenderTargetResource()->GetTexture2DRHI(),
-		CopyInfo
-	);
-	Parameters.RHICmdList->CopyTexture(
-		WaterNormalTex,
-		DispatchParams.WaterNormalMapRT->GetRenderTargetResource()->GetTexture2DRHI(),
-		CopyInfo
-	);
 	Parameters.RHICmdList->CopyTexture(
 		WaterFoamTex,
 		DispatchParams.WaterFoamMapRT->GetRenderTargetResource()->GetTexture2DRHI(),
@@ -467,5 +470,4 @@ void FWaterSystem::Compute(FPostOpaqueRenderParameters& Parameters)
 	CalcVelocity(Parameters);
 	CalcNormal(Parameters);
 	CalcFoam(Parameters);
-	CopyResult(Parameters);
 }
