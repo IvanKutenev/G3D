@@ -44,9 +44,14 @@ protected:
 	virtual void OnUnregister() override;
 
 private:
-	void Init(FPostOpaqueRenderParameters& Parameters);
-	void Calc(FPostOpaqueRenderParameters& Parameters);
-	void Copy(FPostOpaqueRenderParameters& Parameters);
+	void Swap();
+	void InitHeight(FPostOpaqueRenderParameters& Parameters);
+	void InitVelocity(FPostOpaqueRenderParameters& Parameters);
+	void CalcHeight(FPostOpaqueRenderParameters& Parameters);
+	void CalcVelocity(FPostOpaqueRenderParameters& Parameters);
+	void CalcNormal(FPostOpaqueRenderParameters& Parameters);
+	void CalcFoam(FPostOpaqueRenderParameters& Parameters);
+	void CopyResult(FPostOpaqueRenderParameters& Parameters);
 
 private:
 	bool NeedInit = true;

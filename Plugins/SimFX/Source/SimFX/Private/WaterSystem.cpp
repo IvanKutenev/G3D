@@ -158,7 +158,17 @@ IMPLEMENT_GLOBAL_SHADER(FWaterCalcVelocity, "/Shaders/WaterCalcVelocity.usf", "C
 IMPLEMENT_GLOBAL_SHADER(FWaterCalcNormal, "/Shaders/WaterCalcNormal.usf", "CalcNormalCS", SF_Compute);
 IMPLEMENT_GLOBAL_SHADER(FWaterCalcFoam, "/Shaders/WaterCalcFoam.usf", "CalcFoamCS", SF_Compute);
 
-void FWaterSystem::Init(FPostOpaqueRenderParameters& Parameters)
+void FWaterSystem::Swap()
+{
+	WaterHeightTex.Swap(WaterHeightPrevTex);
+	WaterHeightTexUAV.Swap(WaterHeightPrevTexUAV);
+	WaterVelocityTex.Swap(WaterVelocityPrevTex);
+	WaterVelocityTexUAV.Swap(WaterVelocityPrevTexUAV);
+	WaterFoamTex.Swap(WaterFoamPrevTex);
+	WaterFoamTexUAV.Swap(WaterFoamPrevTexUAV);
+}
+
+void FWaterSystem::InitHeight(FPostOpaqueRenderParameters& Parameters)
 {
 	TShaderMapRef<FWaterInitHeight> InitHeightCS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 	if (!InitHeightCS.IsValid())
@@ -180,6 +190,10 @@ void FWaterSystem::Init(FPostOpaqueRenderParameters& Parameters)
 			1
 		)
 	);
+}
+
+void FWaterSystem::InitVelocity(FPostOpaqueRenderParameters& Parameters)
+{
 	TShaderMapRef<FWaterInitVelocity> InitVelocityCS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 	if (!InitVelocityCS.IsValid())
 	{
@@ -201,20 +215,14 @@ void FWaterSystem::Init(FPostOpaqueRenderParameters& Parameters)
 	);
 }
 
-void FWaterSystem::Calc(FPostOpaqueRenderParameters& Parameters)
+void FWaterSystem::CalcHeight(FPostOpaqueRenderParameters& Parameters)
 {
-	WaterHeightTex.Swap(WaterHeightPrevTex);
-	WaterHeightTexUAV.Swap(WaterHeightPrevTexUAV);
-	WaterVelocityTex.Swap(WaterVelocityPrevTex);
-	WaterVelocityTexUAV.Swap(WaterVelocityPrevTexUAV);
-	WaterFoamTex.Swap(WaterFoamPrevTex);
-	WaterFoamTexUAV.Swap(WaterFoamPrevTexUAV);
+	static float Time = 0.0f;
 	TShaderMapRef<FWaterCalcHeight> CalcHeightCS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 	if (!CalcHeightCS.IsValid())
 	{
 		return;
 	}
-	static float Time = 0.0f;
 	FWaterCalcHeight::FParameters CalcHeightPassParams;
 	CalcHeightPassParams.gWaterHeightTexSzX = WaterHeightTex->GetSizeX();
 	CalcHeightPassParams.gWaterHeightTexSzY = WaterHeightTex->GetSizeY();
@@ -234,6 +242,10 @@ void FWaterSystem::Calc(FPostOpaqueRenderParameters& Parameters)
 		)
 	);
 	Time += 1.0f / 30.0f;
+}
+
+void FWaterSystem::CalcVelocity(FPostOpaqueRenderParameters& Parameters)
+{
 	TShaderMapRef<FWaterCalcVelocity> CalcVelocityCS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 	if (!CalcVelocityCS.IsValid())
 	{
@@ -256,6 +268,10 @@ void FWaterSystem::Calc(FPostOpaqueRenderParameters& Parameters)
 			1
 		)
 	);
+}
+
+void FWaterSystem::CalcNormal(FPostOpaqueRenderParameters& Parameters)
+{
 	TShaderMapRef<FWaterCalcNormal> CalcNormalCS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 	if (!CalcNormalCS.IsValid())
 	{
@@ -278,6 +294,10 @@ void FWaterSystem::Calc(FPostOpaqueRenderParameters& Parameters)
 			1
 		)
 	);
+}
+
+void FWaterSystem::CalcFoam(FPostOpaqueRenderParameters& Parameters)
+{
 	TShaderMapRef<FWaterCalcFoam> CalcFoamCS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 	if (!CalcFoamCS.IsValid())
 	{
@@ -302,7 +322,7 @@ void FWaterSystem::Calc(FPostOpaqueRenderParameters& Parameters)
 	);
 }
 
-void FWaterSystem::Copy(FPostOpaqueRenderParameters& Parameters)
+void FWaterSystem::CopyResult(FPostOpaqueRenderParameters& Parameters)
 {
 	FRHICopyTextureInfo CopyInfo;
 	Parameters.RHICmdList->CopyTexture(
@@ -438,9 +458,14 @@ void FWaterSystem::Compute(FPostOpaqueRenderParameters& Parameters)
 {
 	if (NeedInit)
 	{
-		Init(Parameters);
+		InitHeight(Parameters);
+		InitVelocity(Parameters);
 		NeedInit = false;
 	}
-	Calc(Parameters);
-	Copy(Parameters);
+	Swap();
+	CalcHeight(Parameters);
+	CalcVelocity(Parameters);
+	CalcNormal(Parameters);
+	CalcFoam(Parameters);
+	CopyResult(Parameters);
 }
