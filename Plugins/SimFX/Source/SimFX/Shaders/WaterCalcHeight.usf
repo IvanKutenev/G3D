@@ -13,8 +13,8 @@ RWTexture2D<float> gWaterHeightTexRW;
 static const float gDeltaTime = 1.0f / 30.0f;
 static const float gDeltaX = 1.0f;
 static const float gGenEffMagnitude = 0.05f;
-static const float gGenOscMagnitude = 0.01f;
-static const float gGenFreq = 0.5f;
+static const float gGenOscMagnitude = 0.02f;
+static const float gGenFreq = 0.75f;
 
 bool isInsideBounds(int3 id)
 {

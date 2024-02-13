@@ -1,9 +1,7 @@
 #pragma once
  
-#include "CoreMinimal.h"
+#include "SimulationSystem.h"
 #include "Engine/TextureRenderTarget2D.h"
-#include "EngineModule.h"
-#include "GenericPlatform/GenericPlatformMisc.h"
  
 struct SIMFX_API FDispatchParams
 {
@@ -14,108 +12,44 @@ struct SIMFX_API FDispatchParams
 	UTextureRenderTarget2D* WaterFlowMapRT;
 };
  
-class SIMFX_API FWaterSystem {
+class SIMFX_API FWaterSystem : public FSimulationSystem {
 public:
-	void Register()
+	void SetTerrainHeightMapTex(UTexture2D* TerrainHeightMapTex = nullptr)
 	{
-		FScopeLock ParamsLock(&DispatchParamsGuard);
-		RendererDelegateHandle = GetRendererModule().RegisterPostOpaqueRenderDelegate(
-			FPostOpaqueRenderDelegate::CreateRaw(this, &FWaterSystem::Dispatch));
-		NeedInit = true;
+		SetUParam(DispatchParams.TerrainHeightMapTex, TerrainHeightMapTex);
 	}
-	void Unregister()
+	void SetWaterHeightMapRT(UTextureRenderTarget2D* WaterHeightMapRT = nullptr)
 	{
-		FScopeLock ParamsLock(&DispatchParamsGuard);
-		if (RendererDelegateHandle.IsValid())
-		{
-			GetRendererModule().RemovePostOpaqueRenderDelegate(RendererDelegateHandle);
-			RendererDelegateHandle.Reset();
-		}
+		SetUParam(DispatchParams.WaterHeightMapRT, WaterHeightMapRT);
 	}
-	void SetTerrainHeightMapTex(UTexture2D* TerrainHeightMapTex)
+	void SetWaterFlowMapRT(UTextureRenderTarget2D* WaterFlowMapRT = nullptr)
 	{
-		FScopeLock ParamsLock(&DispatchParamsGuard);
-		if (!IsValid(TerrainHeightMapTex))
-		{
-			return;
-		}
-		if (IsValid(DispatchParams.TerrainHeightMapTex))
-		{
-			DispatchParams.TerrainHeightMapTex->RemoveFromRoot();
-		}
-		TerrainHeightMapTex->AddToRoot();
-		DispatchParams.TerrainHeightMapTex = TerrainHeightMapTex;
+		SetUParam(DispatchParams.WaterFlowMapRT, WaterFlowMapRT);
 	}
-	void SetWaterHeightMapRT(UTextureRenderTarget2D* WaterHeightMapRT)
+	void SetWaterNormalMapRT(UTextureRenderTarget2D* WaterNormalMapRT = nullptr)
 	{
-		FScopeLock ParamsLock(&DispatchParamsGuard);
-		if (!IsValid(WaterHeightMapRT))
-		{
-			return;
-		}
-		if (IsValid(DispatchParams.WaterHeightMapRT))
-		{
-			DispatchParams.WaterHeightMapRT->RemoveFromRoot();
-		}
-		WaterHeightMapRT->AddToRoot();
-		DispatchParams.WaterHeightMapRT = WaterHeightMapRT;
+		SetUParam(DispatchParams.WaterNormalMapRT, WaterNormalMapRT);
 	}
-	void SetWaterFlowMapRT(UTextureRenderTarget2D* WaterFlowMapRT)
+	void SetWaterFoamMapRT(UTextureRenderTarget2D* WaterFoamMapRT = nullptr)
 	{
-		FScopeLock ParamsLock(&DispatchParamsGuard);
-		if (!IsValid(WaterFlowMapRT))
-		{
-			return;
-		}
-		if (IsValid(DispatchParams.WaterFlowMapRT))
-		{
-			DispatchParams.WaterFlowMapRT->RemoveFromRoot();
-		}
-		WaterFlowMapRT->AddToRoot();
-		DispatchParams.WaterFlowMapRT = WaterFlowMapRT;
-	}
-	void SetWaterNormalMapRT(UTextureRenderTarget2D* WaterNormalMapRT)
-	{
-		FScopeLock ParamsLock(&DispatchParamsGuard);
-		if (!IsValid(WaterNormalMapRT))
-		{
-			return;
-		}
-		if (IsValid(DispatchParams.WaterNormalMapRT))
-		{
-			DispatchParams.WaterNormalMapRT->RemoveFromRoot();
-		}
-		WaterNormalMapRT->AddToRoot();
-		DispatchParams.WaterNormalMapRT = WaterNormalMapRT;
-	}
-	void SetWaterFoamMapRT(UTextureRenderTarget2D* WaterFoamMapRT)
-	{
-		FScopeLock ParamsLock(&DispatchParamsGuard);
-		if (!IsValid(WaterFoamMapRT))
-		{
-			return;
-		}
-		if (IsValid(DispatchParams.WaterFoamMapRT))
-		{
-			DispatchParams.WaterFoamMapRT->RemoveFromRoot();
-		}
-		WaterFoamMapRT->AddToRoot();
-		DispatchParams.WaterFoamMapRT = WaterFoamMapRT;
+		SetUParam(DispatchParams.WaterFoamMapRT, WaterFoamMapRT);
 	}
 
+protected:
+	virtual bool IsInitialized() override;
+	virtual bool BuildResourceIfNeeded(FPostOpaqueRenderParameters& Parameters) override;
+	virtual void Compute(FPostOpaqueRenderParameters& Parameters) override;
+
+	virtual void OnRegister() override;
+	virtual void OnUnregister() override;
+
 private:
-	bool BuildTextures(FPostOpaqueRenderParameters& Parameters);
 	void Init(FPostOpaqueRenderParameters& Parameters);
 	void Calc(FPostOpaqueRenderParameters& Parameters);
 	void Copy(FPostOpaqueRenderParameters& Parameters);
-	void Dispatch(FPostOpaqueRenderParameters& Parameters);
 
 private:
 	bool NeedInit = true;
-
-	FDelegateHandle RendererDelegateHandle;
-
-	FCriticalSection DispatchParamsGuard;
 	FDispatchParams DispatchParams;
 
 	FTexture2DRHIRef WaterHeightTex;

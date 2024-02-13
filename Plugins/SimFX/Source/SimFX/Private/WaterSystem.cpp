@@ -158,74 +158,6 @@ IMPLEMENT_GLOBAL_SHADER(FWaterCalcVelocity, "/Shaders/WaterCalcVelocity.usf", "C
 IMPLEMENT_GLOBAL_SHADER(FWaterCalcNormal, "/Shaders/WaterCalcNormal.usf", "CalcNormalCS", SF_Compute);
 IMPLEMENT_GLOBAL_SHADER(FWaterCalcFoam, "/Shaders/WaterCalcFoam.usf", "CalcFoamCS", SF_Compute);
 
-bool FWaterSystem::BuildTextures(FPostOpaqueRenderParameters& Parameters)
-{
-	if (!FWaterSystemLocal::CreateTex2d(
-		WaterHeightTex,
-		WaterHeightTexUAV,
-		DispatchParams.WaterHeightMapRT->SizeX,
-		DispatchParams.WaterHeightMapRT->SizeY,
-		EPixelFormat::PF_R32_FLOAT))
-	{
-		return false;
-	}
-	if (!FWaterSystemLocal::CreateTex2d(
-		WaterHeightPrevTex,
-		WaterHeightPrevTexUAV,
-		DispatchParams.WaterHeightMapRT->SizeX,
-		DispatchParams.WaterHeightMapRT->SizeY,
-		EPixelFormat::PF_R32_FLOAT))
-	{
-		return false;
-	}
-	if (!FWaterSystemLocal::CreateTex2d(
-		WaterVelocityTex,
-		WaterVelocityTexUAV,
-		DispatchParams.WaterHeightMapRT->SizeX + 1,
-		DispatchParams.WaterHeightMapRT->SizeY + 1,
-		EPixelFormat::PF_G32R32F))
-	{
-		return false;
-	}
-	if (!FWaterSystemLocal::CreateTex2d(
-		WaterVelocityPrevTex,
-		WaterVelocityPrevTexUAV,
-		DispatchParams.WaterHeightMapRT->SizeX + 1,
-		DispatchParams.WaterHeightMapRT->SizeY + 1,
-		EPixelFormat::PF_G32R32F))
-	{
-		return false;
-	}
-	if (!FWaterSystemLocal::CreateTex2d(
-		WaterFoamTex,
-		WaterFoamTexUAV,
-		DispatchParams.WaterHeightMapRT->SizeX,
-		DispatchParams.WaterHeightMapRT->SizeY,
-		EPixelFormat::PF_R16F))
-	{
-		return false;
-	}
-	if (!FWaterSystemLocal::CreateTex2d(
-		WaterFoamPrevTex,
-		WaterFoamPrevTexUAV,
-		DispatchParams.WaterHeightMapRT->SizeX,
-		DispatchParams.WaterHeightMapRT->SizeY,
-		EPixelFormat::PF_R16F))
-	{
-		return false;
-	}
-	if (!FWaterSystemLocal::CreateTex2d(
-		WaterNormalTex,
-		WaterNormalTexUAV,
-		DispatchParams.WaterHeightMapRT->SizeX,
-		DispatchParams.WaterHeightMapRT->SizeY,
-		EPixelFormat::PF_FloatRGBA))
-	{
-		return false;
-	}
-	return true;
-}
-
 void FWaterSystem::Init(FPostOpaqueRenderParameters& Parameters)
 {
 	TShaderMapRef<FWaterInitHeight> InitHeightCS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
@@ -395,33 +327,115 @@ void FWaterSystem::Copy(FPostOpaqueRenderParameters& Parameters)
 	);
 }
 
-void FWaterSystem::Dispatch(FPostOpaqueRenderParameters& Parameters)
+void FWaterSystem::OnRegister()
 {
-	FScopeLock ParamsLock(&DispatchParamsGuard);
+	NeedInit = true;
+}
+
+void FWaterSystem::OnUnregister()
+{
+	SetTerrainHeightMapTex();
+	SetWaterHeightMapRT();
+	SetWaterFlowMapRT();
+	SetWaterNormalMapRT();
+	SetWaterFoamMapRT();
+}
+
+bool FWaterSystem::IsInitialized()
+{
 	if (!IsValid(DispatchParams.TerrainHeightMapTex))
 	{
-		return;
+		return false;
 	}
 	if (!IsValid(DispatchParams.WaterHeightMapRT))
 	{
-		return;
+		return false;
 	}
 	if (!IsValid(DispatchParams.WaterFlowMapRT))
 	{
-		return;
+		return false;
 	}
 	if (!IsValid(DispatchParams.WaterNormalMapRT))
 	{
-		return;
+		return false;
 	}
 	if (!IsValid(DispatchParams.WaterFoamMapRT))
 	{
-		return;
+		return false;
 	}
-	if (!BuildTextures(Parameters))
+	return true;
+}
+
+bool FWaterSystem::BuildResourceIfNeeded(FPostOpaqueRenderParameters& Parameters)
+{
+	if (!FWaterSystemLocal::CreateTex2d(
+		WaterHeightTex,
+		WaterHeightTexUAV,
+		DispatchParams.WaterHeightMapRT->SizeX,
+		DispatchParams.WaterHeightMapRT->SizeY,
+		EPixelFormat::PF_R32_FLOAT))
 	{
-		return;
+		return false;
 	}
+	if (!FWaterSystemLocal::CreateTex2d(
+		WaterHeightPrevTex,
+		WaterHeightPrevTexUAV,
+		DispatchParams.WaterHeightMapRT->SizeX,
+		DispatchParams.WaterHeightMapRT->SizeY,
+		EPixelFormat::PF_R32_FLOAT))
+	{
+		return false;
+	}
+	if (!FWaterSystemLocal::CreateTex2d(
+		WaterVelocityTex,
+		WaterVelocityTexUAV,
+		DispatchParams.WaterHeightMapRT->SizeX + 1,
+		DispatchParams.WaterHeightMapRT->SizeY + 1,
+		EPixelFormat::PF_G32R32F))
+	{
+		return false;
+	}
+	if (!FWaterSystemLocal::CreateTex2d(
+		WaterVelocityPrevTex,
+		WaterVelocityPrevTexUAV,
+		DispatchParams.WaterHeightMapRT->SizeX + 1,
+		DispatchParams.WaterHeightMapRT->SizeY + 1,
+		EPixelFormat::PF_G32R32F))
+	{
+		return false;
+	}
+	if (!FWaterSystemLocal::CreateTex2d(
+		WaterFoamTex,
+		WaterFoamTexUAV,
+		DispatchParams.WaterHeightMapRT->SizeX,
+		DispatchParams.WaterHeightMapRT->SizeY,
+		EPixelFormat::PF_R16F))
+	{
+		return false;
+	}
+	if (!FWaterSystemLocal::CreateTex2d(
+		WaterFoamPrevTex,
+		WaterFoamPrevTexUAV,
+		DispatchParams.WaterHeightMapRT->SizeX,
+		DispatchParams.WaterHeightMapRT->SizeY,
+		EPixelFormat::PF_R16F))
+	{
+		return false;
+	}
+	if (!FWaterSystemLocal::CreateTex2d(
+		WaterNormalTex,
+		WaterNormalTexUAV,
+		DispatchParams.WaterHeightMapRT->SizeX,
+		DispatchParams.WaterHeightMapRT->SizeY,
+		EPixelFormat::PF_FloatRGBA))
+	{
+		return false;
+	}
+	return true;
+}
+
+void FWaterSystem::Compute(FPostOpaqueRenderParameters& Parameters)
+{
 	if (NeedInit)
 	{
 		Init(Parameters);
