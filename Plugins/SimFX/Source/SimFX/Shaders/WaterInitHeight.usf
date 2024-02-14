@@ -8,16 +8,14 @@ bool isInBounds(int3 id)
     return id.x >= 0 && id.y >= 0 && id.x < TEX_SZ && id.y < TEX_SZ;
 }
 
+static const float gInitHeight = 0.05f;
+
 [numthreads(8, 8, 1)]
 void InitHeightCS(int3 id : SV_DispatchThreadID)
 {
     [branch]
-    if (isInBounds(id) && length(id.xy - 256) < 20)
+    if (isInBounds(id))
     {
-        gWaterHeightTexRW[id.xy] = 50.0f;
-    }
-    else
-    {
-        gWaterHeightTexRW[id.xy] = max(0.0f, 50.0f - TERRAIN_SCALE * gTerrainHeightTexRO[id.xy]);
+        gWaterHeightTexRW[id.xy] = max(0.0f, TERRAIN_SCALE * (gInitHeight - gTerrainHeightTexRO[id.xy]));
     }
 }

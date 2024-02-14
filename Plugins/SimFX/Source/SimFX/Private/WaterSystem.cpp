@@ -68,7 +68,6 @@ public:
 	DECLARE_GLOBAL_SHADER(FWaterInitVelocity);
 	SHADER_USE_PARAMETER_STRUCT(FWaterInitVelocity, FGlobalShader);
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
-		SHADER_PARAMETER_TEXTURE(Texture2D<float>, gTerrainHeightTexRO)
 		SHADER_PARAMETER_UAV(RWTexture2D<float2>, gWaterVelocityTexRW)
 	END_SHADER_PARAMETER_STRUCT()
 public:
@@ -209,7 +208,6 @@ void FWaterSystem::InitVelocity(FPostOpaqueRenderParameters& Parameters)
 		return;
 	}
 	FWaterInitVelocity::FParameters InitVelocityPassParams;
-	InitVelocityPassParams.gTerrainHeightTexRO = DispatchParams.TerrainHeightMapTex->GetResource()->GetTexture2DRHI();
 	InitVelocityPassParams.gWaterVelocityTexRW = WaterVelocityTexUAV;
 	FComputeShaderUtils::Dispatch(
 		*Parameters.RHICmdList,

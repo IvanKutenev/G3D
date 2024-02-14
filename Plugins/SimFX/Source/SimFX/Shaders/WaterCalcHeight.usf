@@ -12,11 +12,21 @@ bool isInsideBounds(int3 id)
     return id.x > 0 && id.y > 0 && id.x < TEX_SZ - 1 && id.y < TEX_SZ - 1;
 }
 
+static const float gGenEffMagnitude = 0.05f;
+static const float gGenOscMagnitude = 0.02f;
+static const float gGenFreq = 0.75f;
+
 [numthreads(8, 8, 1)]
 void CalcHeightCS(int3 id : SV_DispatchThreadID)
 {
     [branch]
-    if (!isInsideBounds(id))
+    if (!isInsideBounds(id) && (id.x == 0 || id.y == 0))
+    {
+        gWaterHeightTexRW[id.xy] = TERRAIN_SCALE * (gGenEffMagnitude +
+            gGenOscMagnitude * sin(gGenFreq * gTime - id.x - id.y) -
+            gTerrainHeightTexRO[id.xy]);
+    }
+    else if (!isInsideBounds(id))
     {
         gWaterHeightTexRW[id.xy] = gWaterHeightPrevTexRO[id.xy];
     }
