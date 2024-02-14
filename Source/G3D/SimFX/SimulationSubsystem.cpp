@@ -2,6 +2,9 @@
 
 #include "SimFX.h"
 #include "UObject/ConstructorHelpers.h"
+#if WITH_EDITOR
+	#include "EditorLevelLibrary.h"
+#endif
 
 namespace FSimulationSubsystemLocal
 {
@@ -41,6 +44,12 @@ USimulationSubsystem::USimulationSubsystem()
 
 void USimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
+#if WITH_EDITOR
+	if (GetWorld() != UEditorLevelLibrary::GetEditorWorld())
+	{
+		return;
+	}
+#endif
 	if (auto SimFxModule = FSimFXModule::Get())
 	{
 		SimFxModule->WaterSystem.Register();
@@ -49,6 +58,12 @@ void USimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 void USimulationSubsystem::Deinitialize()
 {
+#if WITH_EDITOR
+	if (GetWorld() != UEditorLevelLibrary::GetEditorWorld())
+	{
+		return;
+	}
+#endif
 	if (auto SimFxModule = FSimFXModule::Get())
 	{
 		SimFxModule->WaterSystem.Unregister();

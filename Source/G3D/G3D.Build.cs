@@ -8,7 +8,7 @@ public class G3D : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "SimFX" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "SimFX", "EditorScriptingUtilities" });
 
         PublicIncludePaths.AddRange(new string[] { "SimFX/Public" });
 

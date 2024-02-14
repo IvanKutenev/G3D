@@ -13,7 +13,7 @@ bool isInsideBounds(int3 id)
 }
 
 static const float gGenEffMagnitude = 0.05f;
-static const float gGenOscMagnitude = 0.02f;
+static const float gGenOscMagnitude = 0.025f;
 static const float gGenFreq = 0.75f;
 
 [numthreads(8, 8, 1)]

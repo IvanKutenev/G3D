@@ -19,8 +19,8 @@ public class SimFX : ModuleRules
 		PublicDependencyModuleNames.Add("Core");
 		PublicDependencyModuleNames.Add("Engine");
 		PublicDependencyModuleNames.Add("MaterialShaderQualitySettings");
-		
-		PrivateDependencyModuleNames.AddRange(new string[]
+
+        PrivateDependencyModuleNames.AddRange(new string[]
 		{
 			"CoreUObject",
 			"Renderer",
@@ -38,7 +38,7 @@ public class SimFX : ModuleRules
 					"MaterialUtilities",
 					"SlateCore",
 					"Slate"
-				}
+                }
 			);
  
 			CircularlyReferencedDependentModules.AddRange(
